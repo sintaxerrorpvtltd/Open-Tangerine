@@ -12,7 +12,9 @@ IMAGE_OUTPUTS = {'PNG': 'png', 'JPEG': 'jpg', 'WEBP': 'webp', 'TIFF': 'tiff', 'B
 MEDIA_INPUTS = {'.mp4': 'mov', '.mov': 'mov', '.m4v': 'mov', '.mkv': 'matroska', '.webm': 'matroska', '.mp3': 'mp3', '.wav': 'wav', '.flac': 'flac', '.ogg': 'ogg', '.m4a': 'mov', '.aac': 'aac'}
 MEDIA_OUTPUTS = {'MP4': ('mp4', ['-c:v','libx264','-preset','fast','-crf','23','-c:a','aac','-movflags','+faststart']), 'WEBM': ('webm',['-c:v','libvpx-vp9','-deadline','realtime','-cpu-used','6','-c:a','libopus']), 'MP3': ('mp3',['-vn','-c:a','libmp3lame','-b:a','192k']), 'WAV': ('wav',['-vn','-c:a','pcm_s16le']), 'FLAC': ('flac',['-vn','-c:a','flac']), 'OGG': ('ogg',['-vn','-c:a','libvorbis'])}
 OPERATIONS = list(IMAGE_OUTPUTS) + ['Image → PDF', 'PDF → Text', 'Merge PDFs', 'Split PDF', 'SRT → VTT', 'VTT → SRT', 'SHA-256'] + list(MEDIA_OUTPUTS)
-class ConversionError(ValueError): pass
+class ConversionError(ValueError):
+    def __init__(self,message,outputs=()):
+        super().__init__(message);self.outputs=list(outputs)
 
 def source_file(raw):
     p=Path(raw).expanduser()
@@ -67,13 +69,16 @@ def media(p, stage, target, ffmpeg):
     # Input demuxer selected explicitly; network protocols unavailable to the job.
     cmd=[str(exe),'-nostdin','-hide_banner','-loglevel','error','-n','-protocol_whitelist','file,pipe','-f',MEDIA_INPUTS[p.suffix.lower()],'-i',str(p),'-map_metadata','-1','-threads','1',*args,'-fs',str(MAX_OUTPUT),'-f',ext,str(stage)]
     with tempfile.TemporaryFile() as log:
-        proc=subprocess.Popen(cmd,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=log)
+        kwargs={'creationflags':subprocess.CREATE_NO_WINDOW} if os.name=='nt' else {}
+        proc=subprocess.Popen(cmd,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=log,**kwargs)
         start=time.monotonic()
         try:
             while proc.poll() is None:
-                if time.monotonic()-start>150 or log.tell()>65536 or (stage.exists() and stage.stat().st_size>=MAX_OUTPUT):
+                if time.monotonic()-start>150 or os.fstat(log.fileno()).st_size>65536 or (stage.exists() and stage.stat().st_size>=MAX_OUTPUT):
                     raise ConversionError('Media job exceeded its time, output or diagnostic limit.')
                 time.sleep(.05)
+            if os.fstat(log.fileno()).st_size>65536:
+                raise ConversionError('Media job exceeded its diagnostic limit.')
             if proc.returncode:
                 log.seek(0);detail=log.read(2000).decode('utf8','replace')
                 raise ConversionError('FFmpeg could not convert this file. Check its codec support. '+detail[-500:])
@@ -141,7 +146,10 @@ def convert(job):
                         with item.open('wb') as f:w.write(f)
                         pieces.append(item)
                         if sum(x.stat().st_size for x in pieces)>MAX_OUTPUT: raise ConversionError('Split outputs exceed 512 MiB.')
-                    for i,item in enumerate(pieces):results.append(publish(item,folder,f'{p.stem}-page-{i+1}','pdf'))
+                    try:
+                        for i,item in enumerate(pieces):results.append(publish(item,folder,f'{p.stem}-page-{i+1}','pdf'))
+                    except Exception as e:
+                        raise ConversionError(str(e)+' Completed page files were kept.',results) from e
         elif target in MEDIA_OUTPUTS:
             media(p,stage,target,job.get('ffmpeg',''));results.append(publish(stage,folder,stem,MEDIA_OUTPUTS[target][0]))
         elif target=='SHA-256':
@@ -186,6 +194,6 @@ def worker_main():
         raw=sys.stdin.buffer.read(65537)
         if len(raw)>65536: raise ConversionError('Job request too large.')
         result={'ok':True,'outputs':convert(json.loads(raw))}
-    except Exception as e: result={'ok':False,'error':str(e)[:1000] or type(e).__name__}
+    except Exception as e: result={'ok':False,'error':str(e)[:1000] or type(e).__name__,'outputs':getattr(e,'outputs',[])}
     print(json.dumps(result,ensure_ascii=True),flush=True)
     return 0 if result['ok'] else 1

@@ -1,7 +1,8 @@
-import concurrent.futures, hashlib, json, os, shutil, subprocess, sys, tempfile, threading, unittest
+import concurrent.futures, contextlib, hashlib, io, json, os, shutil, subprocess, sys, tempfile, threading, unittest
+from unittest.mock import patch
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from engine import convert, source_file, publish, ConversionError, MAX_BYTES
+from engine import convert, source_file, publish, worker_main, ConversionError, MAX_BYTES
 from runner import run_job, Cancelled
 from PIL import Image
 from pypdf import PdfReader, PdfWriter
@@ -98,15 +99,13 @@ class ConversionTests(unittest.TestCase):
         event=threading.Event();event.set()
         with self.assertRaises(Cancelled):run_job({},cancel=event,command=[sys.executable,'-c','import time;time.sleep(30)'])
     def test_media_wav_to_flac(self):
-        ff=shutil.which('ffmpeg') or ('/opt/homebrew/bin/ffmpeg' if Path('/opt/homebrew/bin/ffmpeg').exists() else None)
-        if not ff:self.skipTest('FFmpeg not installed')
+        ff=self.ffmpeg()
         import wave
         p=self.root/'sample.wav'
         with wave.open(str(p),'wb') as w:w.setnchannels(1);w.setsampwidth(2);w.setframerate(8000);w.writeframes(b'\0\0'*8000)
         out=run_job(self.job('FLAC',[p],ffmpeg=ff));self.assertEqual(Path(out[0]).read_bytes()[:4],b'fLaC')
     def test_all_media_outputs(self):
-        ff=shutil.which('ffmpeg') or ('/opt/homebrew/bin/ffmpeg' if Path('/opt/homebrew/bin/ffmpeg').exists() else None)
-        if not ff:self.skipTest('FFmpeg not installed')
+        ff=self.ffmpeg()
         p=self.root/'video.mp4'
         subprocess.run([ff,'-nostdin','-v','error','-f','lavfi','-i','color=c=orange:s=64x64:r=12','-f','lavfi','-i','sine=frequency=440:sample_rate=24000','-t','0.5','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac',str(p)],check=True)
         for target in ('MP4','WEBM','MP3','WAV','FLAC','OGG'):
@@ -119,4 +118,28 @@ class ConversionTests(unittest.TestCase):
         with self.assertRaisesRegex(ConversionError,'Animated'):convert(self.job('JPEG',[p]))
     def test_batch_limit(self):
         with self.assertRaises(ConversionError):convert(self.job('Merge PDFs',[self.src]*101))
+    def ffmpeg(self):
+        ff=shutil.which('ffmpeg') or ('/opt/homebrew/bin/ffmpeg' if Path('/opt/homebrew/bin/ffmpeg').exists() else None)
+        if not ff:
+            if os.environ.get('OPEN_TANGERINE_REQUIRE_FFMPEG')=='1':self.fail('FFmpeg is required for this test run')
+            self.skipTest('FFmpeg not installed')
+        return ff
+    def test_pdf_split_failure_reports_already_published_pages(self):
+        p=self.pdf(pages=3);published=[]
+        def fail_second(stage,folder,stem,suffix):
+            if published:raise OSError('Disk full')
+            output=publish(stage,folder,stem,suffix);published.append(output);return output
+        with patch('engine.publish',side_effect=fail_second):
+            with self.assertRaises(ConversionError) as error:convert(self.job('Split PDF',[p]))
+        self.assertEqual(error.exception.outputs,published)
+        self.assertEqual(len(PdfReader(published[0]).pages),1)
+        self.assertEqual(len(list(self.root.glob('*page*'))),1)
+        self.assertFalse(list(self.root.glob('.opentangerine-*')))
+    def test_worker_error_protocol_includes_retained_outputs(self):
+        request=io.TextIOWrapper(io.BytesIO(b'{}'),encoding='utf8');output=io.StringIO()
+        # Resource limits belong in disposable workers, never in the test runner.
+        with patch('sys.platform','test'),patch('sys.stdin',request),patch('engine.convert',side_effect=ConversionError('Disk full',['kept.pdf'])),contextlib.redirect_stdout(output):
+            status=worker_main()
+        self.assertEqual(status,1)
+        result=json.loads(output.getvalue());self.assertFalse(result['ok']);self.assertEqual(result['outputs'],['kept.pdf'])
 if __name__=='__main__':unittest.main()

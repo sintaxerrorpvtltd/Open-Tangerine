@@ -6,3 +6,6 @@ dist/
 .env.*
 *.p12
 *.mobileprovision
+__pycache__/
+*.pyc
+.air/
