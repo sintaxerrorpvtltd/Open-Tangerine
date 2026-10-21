@@ -3,10 +3,38 @@ set -euo pipefail
 # 0.1.9: reliable drag hover, per-app exclusions and two-second notch dismissal.
 cd "$(dirname "$0")/.."
 app="$PWD/dist/Open Tangerine.app"
-mkdir -p "$app/Contents/MacOS" "$PWD/.build/module-cache"
-find NativeApp/Sources -name '*.swift' -print0 | xargs -0 xcrun swiftc -swift-version 5 -O -parse-as-library -module-cache-path "$PWD/.build/module-cache" -o "$app/Contents/MacOS/OpenTangerine"
+module_cache="$PWD/.build/module-cache"
+mkdir -p "$app/Contents/MacOS" "$module_cache" "$PWD/.build"
+
+# macOS 15 (Sequoia) is the minimum supported release. Intel (x86_64) builds are
+# first-class; set BUILD_UNIVERSAL=1 to produce one app for Intel and Apple silicon.
+MIN_MACOS="${MACOSX_DEPLOYMENT_TARGET:-15.0}"
+if [[ "${BUILD_UNIVERSAL:-0}" == "1" || "${ARCHS:-}" == "universal" ]]; then
+  archs=(x86_64 arm64)
+else
+  read -r -a archs <<< "${ARCHS:-$(uname -m)}"
+fi
+
+binaries=()
+for arch in "${archs[@]}"; do
+  binary="$PWD/.build/OpenTangerine-$arch"
+  find NativeApp/Sources -name '*.swift' -print0 | xargs -0 xcrun swiftc \
+    -swift-version 5 -O -parse-as-library \
+    -target "$arch-apple-macosx$MIN_MACOS" \
+    -module-cache-path "$module_cache" \
+    -o "$binary"
+  binaries+=("$binary")
+done
+
+if (( ${#binaries[@]} > 1 )); then
+  xcrun lipo -create "${binaries[@]}" -output "$app/Contents/MacOS/OpenTangerine"
+else
+  cp "${binaries[0]}" "$app/Contents/MacOS/OpenTangerine"
+fi
+chmod +x "$app/Contents/MacOS/OpenTangerine"
+
 # Preserve the legacy bundle identifier so existing settings and login registration survive updates.
-cat > "$app/Contents/Info.plist" <<'PLIST'
+cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
@@ -17,13 +45,13 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>0.1.9</string>
 <key>CFBundleVersion</key><string>10</string>
-<key>LSMinimumSystemVersion</key><string>26.0</string>
+<key>LSMinimumSystemVersion</key><string>15.0</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 PLIST
 mkdir -p "$app/Contents/Resources"
-xcrun swiftc -module-cache-path "$PWD/.build/module-cache" NativeApp/Sources/UI/BrandArtwork.swift scripts/make-icon.swift -o .build/make-icon
+xcrun swiftc -module-cache-path "$module_cache" NativeApp/Sources/UI/BrandArtwork.swift scripts/make-icon.swift -o .build/make-icon
 .build/make-icon "$PWD/.build/AppIcon.iconset"
 python3 scripts/package-icon.py .build/AppIcon.iconset "$app/Contents/Resources/AppIcon.icns"
 cp LICENSE "$app/Contents/Resources/GPL-3.0.txt"
@@ -38,4 +66,4 @@ fi
 codesign --verify --deep --strict --verbose=2 "$app"
 test -x "$app/Contents/MacOS/OpenTangerine"
 plutil -lint "$app/Contents/Info.plist"
-printf 'Built %s\n' "$app"
+printf 'Built %s (%s, macOS %s+)\n' "$app" "$(xcrun lipo -archs "$app/Contents/MacOS/OpenTangerine")" "$MIN_MACOS"

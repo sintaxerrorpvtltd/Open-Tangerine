@@ -374,35 +374,34 @@ struct SettingsTabBar: View {
     @Namespace private var namespace
 
     var body: some View {
-        GlassEffectContainer(spacing: 0) {
-            HStack(spacing: 2) {
-                ForEach(SettingsTab.allCases) { tab in
-                    Button {
-                        model.tab = tab
-                    } label: {
-                        Label(tab.title, systemImage: tab.symbol)
-                            .labelStyle(.titleOnly)
-                            .font(.system(size: 13, weight: model.tab == tab ? .semibold : .regular))
-                            .foregroundStyle(model.tab == tab ? Color.white : Color.primary)
-                            .lineLimit(1)
-                            .fixedSize()
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 6)
-                            .contentShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .background {
-                        if model.tab == tab {
-                            Color.clear
-                                .glassEffect(.regular.tint(Theme.accent).interactive(), in: Capsule())
-                                .matchedGeometryEffect(id: "selection", in: namespace)
-                        }
+        HStack(spacing: 2) {
+            ForEach(SettingsTab.allCases) { tab in
+                Button {
+                    model.tab = tab
+                } label: {
+                    Label(tab.title, systemImage: tab.symbol)
+                        .labelStyle(.titleOnly)
+                        .font(.system(size: 13, weight: model.tab == tab ? .semibold : .regular))
+                        .foregroundStyle(model.tab == tab ? Color.white : Color.primary)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .background {
+                    if model.tab == tab {
+                        Capsule()
+                            .fill(Theme.accent)
+                            .matchedGeometryEffect(id: "selection", in: namespace)
                     }
                 }
             }
-            .padding(3)
-            .glassEffect(.regular, in: Capsule())
         }
+        .padding(3)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay { Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 1) }
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: model.tab)
     }
 }

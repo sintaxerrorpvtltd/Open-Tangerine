@@ -1,6 +1,12 @@
 # Trial build status
 
-Version 0.1.7, 19 October 2026. Native Swift app, macOS 26+, Apple silicon development environment.
+Version 0.1.9 compatibility pass, 21 October 2026. Native Swift app, macOS 15 (Sequoia)+, Intel and Apple silicon. Verified locally on macOS 15.8 (x86_64, Swift 6.1.2).
+
+## macOS 15 and Intel compatibility pass
+
+The app previously required the macOS 26 SDK because of Liquid Glass calls (`GlassEffectContainer`, `.glassEffect`). Those calls are replaced with `.ultraThinMaterial` backgrounds and explicit accent overlays; macOS 15 and later render the same layouts without the macOS 26-only API. The radial wheel panel also no longer uses `.transient` window collection behavior, which kept it offscreen on macOS 15 when another app was active.
+
+Both slices of the universal build were compiled against the macOS 15.5 SDK with a 15.0 deployment target (`xcrun lipo -archs` reports `x86_64 arm64`). On the Intel test machine, `./scripts/test.sh` passed every compiled suite; the media suite skipped because FFmpeg/ffprobe were unavailable. The settings window, radial convert/tools wheel, pill and card progress HUDs, and all 25 tool windows opened and rendered through the screenshot driver. The current trial remains ad-hoc signed and is not notarized.
 
 ## Findings and repairs
 
@@ -39,7 +45,7 @@ GitHub macOS 26 release CI for 0.1.6 completed successfully: native PNG-to-HEIC 
 - Finder pasteboard service was unavailable locally; its four-file test passed in GitHub CI. The four-file engine path passes; this does not claim live Finder drag verification. Clipboard/reveal actions and AV metadata export were not exercised.
 - Word support is DOCX output, not general Word input. PDF-to-DOCX reconstructs text or page images, without OCR or exact layout preservation.
 - Compression cannot guarantee smaller output. The WebP fallback is lossless, ignores lossy quality, and produces larger files. Its output must stay under 100 MB; dimensions are limited to 16,384 per side. All images retain the 40 MP input limit.
-- Archive conversion is disabled and no longer offered. SVG, malformed-file fuzzing, huge-batch performance, Intel hardware, accessibility and every possible codec/profile combination are not exhaustively verified.
+- Archive conversion is disabled and no longer offered. SVG, malformed-file fuzzing, huge-batch performance, accessibility and every possible codec/profile combination are not exhaustively verified. Intel and macOS 15 were build- and UI-tested locally; Apple silicon remains covered by the universal build target, not by this local run.
 - The app remains ad-hoc signed, not Apple-notarized. Updates use the website for manual download/replacement. No Apple Developer subscription is needed for the update check.
 
 Tests establish specific behavior on these fixtures; they are not a promise that arbitrary files can never fail. Existing compiler deprecation warnings remain.

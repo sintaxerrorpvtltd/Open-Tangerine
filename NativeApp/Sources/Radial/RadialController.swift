@@ -11,7 +11,7 @@ final class RadialPanel: NSPanel {
         level = .popUpMenu
         ignoresMouseEvents = false
         isReleasedWhenClosed = false
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         hidesOnDeactivate = false
         acceptsMouseMovedEvents = true
         radialView.frame = contentView?.bounds ?? .zero

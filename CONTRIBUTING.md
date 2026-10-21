@@ -1,6 +1,6 @@
 # Contributing
 
-Use macOS 26+ and Xcode 26 or compatible Command Line Tools. Fork the repository, create a focused branch, run `./scripts/test.sh` and `./scripts/build-app.sh`, and open a pull request with the problem, behavior change and verification.
+Use macOS 15 (Sequoia) or later and Xcode 16 / compatible Command Line Tools. Fork the repository, create a focused branch, run `./scripts/test.sh` and `./scripts/build-app.sh`, and open a pull request with the problem, behavior change and verification. Use `BUILD_UNIVERSAL=1 ./scripts/build-app.sh` when both Intel and Apple silicon output need checking.
 
 Keep originals safe. Never overwrite user files silently. Use argument arrays for processes. Do not add network calls, telemetry, binary downloads or new permissions without an explicit design discussion. Declare codec and dependency licenses. Do not copy proprietary code or assets.
 

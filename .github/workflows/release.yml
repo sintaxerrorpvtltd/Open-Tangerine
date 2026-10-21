@@ -9,6 +9,8 @@ permissions:
 jobs:
   release:
     runs-on: macos-26
+    env:
+      BUILD_UNIVERSAL: "1"
     steps:
       - uses: actions/checkout@v4
       - name: Install media test dependency
@@ -33,4 +35,4 @@ jobs:
           fi
           ditto -c -k --sequesterRsrc --keepParent 'dist/Open Tangerine.app' "dist/Open-Tangerine-$VERSION-macOS.zip"
           shasum -a 256 "dist/Open-Tangerine-$VERSION-macOS.zip" > dist/SHA256SUMS.txt
-          gh release create "v$VERSION" "dist/Open-Tangerine-$VERSION-macOS.zip" dist/SHA256SUMS.txt --target "$GITHUB_SHA" --title "Open Tangerine $VERSION · Developer trial" --notes 'Developer trial for macOS 26+. Ad-hoc signed, NOT Apple-notarized; macOS may block opening this trial. Download the ZIP, quit the previous version, and replace the app. Installation guide: https://sintaxerrorpvtltd.github.io/Open-Tangerine/#download . Includes complete menu icons, corrected Sintax Error branding, continuous drag hover highlighting, per-application drag exclusions and automatic two-second notch dismissal. Internal non-file drags no longer trigger the wheel. See README for tested coverage and limits. Automatic installation is not supported yet.'
+          gh release create "v$VERSION" "dist/Open-Tangerine-$VERSION-macOS.zip" dist/SHA256SUMS.txt --target "$GITHUB_SHA" --title "Open Tangerine $VERSION · Developer trial" --notes 'Developer trial for macOS 15+ (Sequoia and later), Intel and Apple silicon. Ad-hoc signed, NOT Apple-notarized; macOS may block opening this trial. Download the ZIP, quit the previous version, and replace the app. Installation guide: https://sintaxerrorpvtltd.github.io/Open-Tangerine/#download . Includes complete menu icons, corrected Sintax Error branding, continuous drag hover highlighting, per-application drag exclusions and automatic two-second notch dismissal. Internal non-file drags no longer trigger the wheel. See README for tested coverage and limits. Automatic installation is not supported yet.'

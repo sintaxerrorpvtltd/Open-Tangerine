@@ -347,24 +347,31 @@ final class JobPillPanel: NSPanel, JobHUD {
             return
         }
         let size = JobPillView.Layout.size(rows: max(1, runner?.jobs.count ?? 1))
-        let inset = screen.safeAreaInsets.top
+        let notchInset = screen.safeAreaInsets.top
+        let hasNotch = notchInset > 0
+        let inset = hasNotch ? notchInset : 0
         guard let runner else { return }
-        var notchWidth: CGFloat = 180
+        var notchWidth: CGFloat = hasNotch ? 180 : 150
         if let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea {
             notchWidth = max(1, right.minX - left.maxX)
         }
-        hosting?.rootView = JobPillView(topInset: inset, collapsedWidth: notchWidth, contentHeight: size.height, runner: runner, presentation: presentation)
+        hosting?.rootView = JobPillView(topInset: inset, collapsedWidth: notchWidth, contentHeight: size.height, hasNotch: hasNotch, runner: runner, presentation: presentation)
         presentation.jobs = runner.jobs
         presentation.generation += 1
         let generation = presentation.generation
         let wasVisible = isVisible
         let top = screen.frame.maxY
         var centerX = screen.frame.midX
-        if let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea {
+        if hasNotch, let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea {
             centerX = (left.maxX + right.minX) / 2
+        } else {
+            centerX = screen.visibleFrame.midX
         }
-        DiagnosticLog.log("pill show size=\(size) screen=\(screen.frame) inset=\(screen.safeAreaInsets.top) centerX=\(centerX) top=\(top)")
-        let target = NSRect(x: (centerX - size.width / 2).rounded(), y: top - size.height - inset, width: size.width, height: size.height + inset)
+        DiagnosticLog.log("pill show size=\(size) screen=\(screen.frame) inset=\(notchInset) centerX=\(centerX) top=\(top)")
+        // Without a hardware notch, float the HUD just below the menu bar instead
+        // of covering it and pretending the screen edge is a notch.
+        let targetY = hasNotch ? top - size.height - inset : screen.visibleFrame.maxY - size.height - 8
+        let target = NSRect(x: (centerX - size.width / 2).rounded(), y: targetY, width: size.width, height: size.height + inset)
         if isVisible, frame != target {
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : 0.25
@@ -376,7 +383,7 @@ final class JobPillPanel: NSPanel, JobHUD {
         }
         if !wasVisible { presentation.expanded = false }
         orderFrontRegardless()
-        // Give the collapsed mask a layout pass before revealing it from the hardware notch.
+        // Give the collapsed mask a layout pass before revealing it from the notch.
         DispatchQueue.main.async { [weak self] in
             guard let self, self.presentation.generation == generation else { return }
             let animation: Animation? = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.88)
@@ -410,6 +417,7 @@ struct JobPillView: View {
     var topInset: CGFloat = 0
     var collapsedWidth: CGFloat = 180
     var contentHeight: CGFloat = 104
+    var hasNotch: Bool = true
     @ObservedObject var runner: JobRunner
     @ObservedObject var presentation: NotchPresentation
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -463,18 +471,28 @@ struct JobPillView: View {
         .padding(.top, topInset)
         .background {
             if settings.notchSurface == .glass && !reduceTransparency {
-                Color.black.opacity(0.45)
-                    .glassEffect(.regular.tint(.black.opacity(0.45)), in: .rect)
-                    .overlay(alignment: .top) { Color.black.frame(height: topInset) }
+                ZStack(alignment: .top) {
+                    Rectangle().fill(.ultraThinMaterial)
+                    Color.black.opacity(0.5)
+                    if topInset > 0 {
+                        Color.black.frame(height: topInset)
+                    }
+                }
             } else {
                 Color(.sRGB, red: 0, green: 0, blue: 0, opacity: 1)
             }
         }
         .onHover { runner.hoverResults($0) }
         .mask(alignment: .top) {
-            UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: presentation.expanded ? 24 : 10, bottomTrailingRadius: presentation.expanded ? 24 : 10, topTrailingRadius: 0)
-                .frame(width: presentation.expanded ? 360 : min(360, collapsedWidth),
-                       height: presentation.expanded ? contentHeight + topInset : max(2, topInset))
+            if hasNotch {
+                UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: presentation.expanded ? 24 : 10, bottomTrailingRadius: presentation.expanded ? 24 : 10, topTrailingRadius: 0)
+                    .frame(width: presentation.expanded ? 360 : min(360, collapsedWidth),
+                           height: presentation.expanded ? contentHeight + topInset : max(2, topInset))
+            } else {
+                RoundedRectangle(cornerRadius: presentation.expanded ? 24 : 9, style: .continuous)
+                    .frame(width: presentation.expanded ? 360 : min(360, collapsedWidth),
+                           height: presentation.expanded ? contentHeight : 8)
+            }
         }
         .allowsHitTesting(presentation.expanded)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -558,7 +576,7 @@ struct JobHUDView: View {
         .padding(.trailing, 16)
         .padding(.bottom, 16)
         .frame(width: 340)
-        .background { Color.clear.glassEffect(.regular, in: .rect).ignoresSafeArea() }
+        .background { Rectangle().fill(.ultraThinMaterial).ignoresSafeArea() }
         .tint(Theme.accent)
         .onHover { runner.hoverResults($0) }
     }

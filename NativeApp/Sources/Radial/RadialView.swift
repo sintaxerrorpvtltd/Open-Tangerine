@@ -147,16 +147,14 @@ struct RadialWheelView: View {
     var geometry: RadialGeometry
 
     var body: some View {
-        GlassEffectContainer(spacing: 0) {
-            ZStack {
-                if items.isEmpty {
-                    empty
-                } else {
-                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                        wedge(item, index: index)
-                    }
-                    pill
+        ZStack {
+            if items.isEmpty {
+                empty
+            } else {
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    wedge(item, index: index)
                 }
+                pill
             }
         }
         .frame(width: geometry.outerRadius * 2 + 40, height: geometry.outerRadius * 2 + 40)
@@ -186,7 +184,17 @@ struct RadialWheelView: View {
                     .position(mid)
             }
             .frame(width: rect.width, height: rect.height)
-            .glassEffect(selected ? .regular.tint(Theme.accent) : .regular, in: shape)
+            .background {
+                shape.fill(.ultraThinMaterial)
+                    .overlay {
+                        if selected {
+                            shape.fill(Theme.accent.opacity(0.78))
+                        }
+                    }
+                    .overlay {
+                        shape.stroke(Color.white.opacity(selected ? 0.35 : 0.12), lineWidth: 1)
+                    }
+            }
             .scaleEffect(selected && !reduceMotion ? 1.025 : 1)
             .offset(x: selected && !reduceMotion ? (mid.x - rect.midX) / geometry.labelRadius * 4 : 0,
                     y: selected && !reduceMotion ? (mid.y - rect.midY) / geometry.labelRadius * 4 : 0)
@@ -220,7 +228,8 @@ struct RadialWheelView: View {
             .padding(.horizontal, 12)
             .frame(height: 34)
             .frame(maxWidth: geometry.innerRadius * 2 - 8)
-            .glassEffect(.regular, in: Capsule())
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay { Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1) }
     }
 
     private var empty: some View {
@@ -238,7 +247,8 @@ struct RadialWheelView: View {
         .padding(.horizontal, 22)
         .padding(.vertical, 12)
         .frame(maxWidth: geometry.outerRadius * 2)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1) }
     }
 }
 

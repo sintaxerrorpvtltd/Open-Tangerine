@@ -3,7 +3,7 @@
 A local file converter and toolbox for **macOS**, with an early **Windows/Linux desktop edition**, by **Sintax Error Private Limited**.
 Local processing, no account, no subscription. GPL-3.0-only. Safety limits apply.
 
-**Mac status: 0.1.9 developer trial — ad-hoc signed, not Apple-notarized.** This is an independent project, not affiliated with Tangerine. It builds on [Satsuma](https://github.com/plyght/satsuma), with its MIT attribution preserved. It is not yet a complete replacement for Tangerine. See [limitations](#limitations).
+**Mac status: 0.1.9 developer trial — ad-hoc signed, not Apple-notarized, universal build for macOS 15 (Sequoia) and later, on Intel and Apple silicon.** This is an independent project, not affiliated with Tangerine. It builds on [Satsuma](https://github.com/plyght/satsuma), with its MIT attribution preserved. It is not yet a complete replacement for Tangerine. See [limitations](#limitations).
 
 ## Windows and Linux desktop edition
 
@@ -11,7 +11,7 @@ The new **0.2.0 early desktop trial** is a separate implementation with a smalle
 
 | Platform | Interface | Availability / requirements |
 |---|---|---|
-| macOS | Native menu bar, global drag wheel and notch | v0.1.9; macOS 26+, Apple silicon |
+| macOS | Native menu bar, global drag wheel and notch/pill HUD | v0.1.9; macOS 15+ (Sequoia), Intel and Apple silicon |
 | Windows | Batch file-drop window and progress panel | 0.2.0 early trial; Windows 10/11 x64; unsigned portable ZIP |
 | Linux | Batch file-drop window and progress panel | 0.2.0 early trial; x64 Ubuntu 24.04 / glibc 2.39+; portable tar.gz |
 
@@ -50,11 +50,11 @@ Download the trial ZIP, quit the previous app, unzip, then drag Open Tangerine i
 
 </details>
 
-*These are illustrated workflows, not screen recordings or conversion-speed benchmarks. The glass effect is an illustration of the native material. macOS 26+ developer trial.*
+*These are illustrated workflows, not screen recordings or conversion-speed benchmarks. The glass effect is an illustration of the native material. macOS 15+ developer trial, Intel and Apple silicon.*
 
 ## Install from source
 
-Requires **macOS 26 or later**, Xcode 26 / compatible Command Line Tools, and Git. The build script uses Apple's Swift compiler directly; no package manager or third-party Swift dependencies are required.
+Requires **macOS 15 (Sequoia) or later**, Xcode 16 / compatible Command Line Tools (Swift 6.1+) and Git. The build script uses Apple's Swift compiler directly; no package manager or third-party Swift dependencies are required. It builds for the current Mac's architecture by default, so an Intel Mac produces an x86_64 app and an Apple silicon Mac produces an arm64 app.
 
 ```sh
 git clone https://github.com/sintaxerrorpvtltd/Open-Tangerine.git
@@ -62,6 +62,14 @@ cd Open-Tangerine
 ./scripts/build-app.sh
 open "dist/Open Tangerine.app"
 ```
+
+To build one universal app for both Intel and Apple silicon:
+
+```sh
+BUILD_UNIVERSAL=1 ./scripts/build-app.sh
+```
+
+The macOS 26-only Liquid Glass API is replaced with native macOS materials where it is unavailable, so the same source builds and runs on macOS 15+. The app is targeted at `arm64-apple-macosx15.0` / `x86_64-apple-macosx15.0`.
 
 To keep the app, drag `dist/Open Tangerine.app` into your Applications folder in Finder. The local build is ad-hoc signed, not Apple-notarized. We do not recommend disabling Gatekeeper. A signed, notarized release and automatic updates are planned.
 
@@ -128,7 +136,7 @@ The active format matrix describes **176 potential routes** and **25 tool types*
 - Native image loading is limited to 100 MB / 40 megapixels. Animated/multipage image behavior needs further work; use single-frame images for this trial.
 - This is not a security-certified sanitizer. Metadata editing and visible redaction should not be relied on to anonymize sensitive documents. Review exported files.
 - Heavy native operations can temporarily block the interface. Cancellation is best-effort for external processes. Worker isolation and timeouts are release gates.
-- No App Sandbox, notarization, automatic updates, Intel-specific verification or complete accessibility audit yet.
+- No App Sandbox, notarization, automatic updates or complete accessibility audit yet. The compatibility pass was verified on macOS 15.8 on Intel; Apple silicon is built by the universal release target.
 - No AI service is implemented, so there is no API key or usage charge. Update checks contact GitHub; file processing stays local. Future AI integrations must be opt-in and bring-your-own-key.
 
 ## Development
