@@ -27,6 +27,37 @@ The illustrations below demonstrate the **Mac app**. The remaining Mac-specific 
 
 Download the trial ZIP, quit the previous app, unzip, then drag Open Tangerine into Applications and choose Replace if updating. macOS may block this unnotarized trial; see the website for Apple's official per-app opening guidance. Never disable Gatekeeper globally. Check for Updates opens the website with your installed version; the website compares published releases and provides a manual download. No Apple Developer subscription is required for update checks or hosting.
 
+### If macOS says it cannot verify the app
+
+The public trial is **ad-hoc signed, not Apple-notarized**. On first launch Gatekeeper shows “Apple could not verify…” and offers **Move to Bin**. This is expected for this trial and is not an Intel or macOS 15 incompatibility: the release is a universal binary that builds and runs on Intel macOS 15.
+
+To open the exact download you trust:
+
+1. Click **Done** (do not click Move to Bin).
+2. Open **System Settings → Privacy & Security**.
+3. Scroll to Security and click **Open Anyway** next to Open Tangerine.
+4. Confirm **Open**. macOS remembers this decision for that app.
+
+If **Open Anyway** is unavailable, install the same build from source. A local build has no quarantine flag and is not evaluated by Gatekeeper:
+
+```sh
+git clone https://github.com/sintaxerrorpvtltd/Open-Tangerine.git
+cd Open-Tangerine
+./scripts/install-mac.sh
+```
+
+The installer builds a universal Intel/Apple-silicon app, verifies its signature, backs up an existing copy, installs it to `/Applications` and launches it.
+
+Terminal users who already have the ZIP can apply the per-app decision directly after checking its SHA-256 against the release notes:
+
+```sh
+./scripts/install-mac.sh --from ~/Downloads/Open-Tangerine-0.1.10-macOS.zip --allow-unnotarized
+```
+
+`--allow-unnotarized` removes `com.apple.quarantine` from that installed bundle only. It never disables Gatekeeper globally. Without the flag, the installer refuses quarantined downloads.
+
+Maintainers with a Developer ID can produce a trusted download by setting `DEVELOPER_ID_APPLICATION` and `NOTARY_PROFILE`; `scripts/build-app.sh` then signs with hardened runtime, submits to Apple's notary service, and staples the ticket. The release workflow does the same when these repository secrets are configured: `MACOS_CERTIFICATE_P12`, `MACOS_CERTIFICATE_PASSWORD`, `KEYCHAIN_PASSWORD`, `APPLE_ID`, `APPLE_TEAM_ID` and `APPLE_APP_PASSWORD`. Without all of them, releases stay ad-hoc signed and macOS can still block public trial downloads.
+
 ## See it in motion
 
 **Drag. Hold Shift. Drop.** Convert a selection of files together, with a separate output for each input.
@@ -59,11 +90,10 @@ Requires **macOS 15 or later**, Xcode 26 / compatible Command Line Tools, and Gi
 ```sh
 git clone https://github.com/sintaxerrorpvtltd/Open-Tangerine.git
 cd Open-Tangerine
-./scripts/build-app.sh
-open "dist/Open Tangerine.app"
+./scripts/install-mac.sh
 ```
 
-To keep the app, drag `dist/Open Tangerine.app` into your Applications folder in Finder. The local build is ad-hoc signed, not Apple-notarized. We do not recommend disabling Gatekeeper. A signed, notarized release and automatic updates are planned.
+This builds a universal Intel/Apple-silicon app, verifies it and installs it to `/Applications`. To build without installing, run `./scripts/build-app.sh` and open `dist/Open Tangerine.app`; the local build is ad-hoc signed, not Apple-notarized, but it has no quarantine flag. We do not recommend disabling Gatekeeper. A signed, notarized release and automatic updates are planned.
 
 Optional: install FFmpeg from your trusted package manager (`brew install ffmpeg` if you already use Homebrew). Settings → Formats shows whether FFmpeg is available. It is already present on the development Mac. We do not bundle or silently download it.
 
@@ -128,7 +158,7 @@ The active format matrix describes **176 potential routes** and **25 tool types*
 - Native image loading is limited to 100 MB / 40 megapixels. Animated/multipage image behavior needs further work; use single-frame images for this trial.
 - This is not a security-certified sanitizer. Metadata editing and visible redaction should not be relied on to anonymize sensitive documents. Review exported files.
 - Heavy native operations can temporarily block the interface. Cancellation is best-effort for external processes. Worker isolation and timeouts are release gates.
-- No App Sandbox, notarization, automatic updates, Intel-specific verification or complete accessibility audit yet.
+- No App Sandbox, notarization, automatic updates or complete accessibility audit yet. Intel builds are verified on macOS 15.8.1 (x86_64) for build, launch and the installer path; other Intel hardware and multi-monitor arrangements still need community testing.
 - No AI service is implemented, so there is no API key or usage charge. Update checks contact GitHub; file processing stays local. Future AI integrations must be opt-in and bring-your-own-key.
 
 ## Development
@@ -149,4 +179,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), [build statu
 
 Open Tangerine additions © 2026 Sintax Error Private Limited, licensed under **GPL-3.0-only**. See [LICENSE](LICENSE). Commercial use and sale are permitted under that license; distribution of covered derivatives requires corresponding source and the GPL terms. Upstream Satsuma code © 2026 plyght remains available under its original MIT terms, reproduced in [NativeApp/LICENSE](NativeApp/LICENSE). Contributors retain copyright in their contributions. The license does not grant rights to company names or logos.
 
-Mac compatibility integrates @Teshgotcode’s Liquid Glass availability wrappers (#1) with the universal build, non-notched HUD and radial-window fixes proposed by @Devansh-Kumar-Saini (#5). Native Liquid Glass remains on macOS 26 when built with its SDK. Intel hardware and individual multi-monitor arrangements still need community testing.
+Mac compatibility integrates @Teshgotcode’s Liquid Glass availability wrappers (#1) with the universal build, non-notched HUD and radial-window fixes proposed by @Devansh-Kumar-Saini (#5). Native Liquid Glass remains on macOS 26 when built with its SDK. The universal build was verified on Intel macOS 15.8.1; other Intel hardware and individual multi-monitor arrangements still need community testing.

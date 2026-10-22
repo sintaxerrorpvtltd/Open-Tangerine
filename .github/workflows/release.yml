@@ -28,11 +28,42 @@ jobs:
       contents: write
     env:
       BUILD_UNIVERSAL: '1'
+      MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+      MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
       - name: Install media test dependency
         run: command -v ffmpeg >/dev/null || brew install ffmpeg
+      - name: Configure Developer ID signing and notarization
+        if: env.MACOS_CERTIFICATE_P12 != ''
+        run: |
+          set -euo pipefail
+          if [[ -z "${MACOS_CERTIFICATE_PASSWORD:-}" || -z "${KEYCHAIN_PASSWORD:-}" || -z "${APPLE_ID:-}" || -z "${APPLE_TEAM_ID:-}" || -z "${APPLE_APP_PASSWORD:-}" ]]; then
+            echo 'Signing certificate is present but notarization secrets are incomplete.' >&2
+            exit 1
+          fi
+          cert="$RUNNER_TEMP/developer-id.p12"
+          keychain="$RUNNER_TEMP/opentangerine-signing.keychain-db"
+          printf '%s' "$MACOS_CERTIFICATE_P12" | base64 --decode -o "$cert"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$keychain"
+          security import "$cert" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security list-keychain -d user -s "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$keychain"
+          identity="$(security find-identity -v -p codesigning "$keychain" | awk -F'"' '/Developer ID Application/{print $2; exit}')"
+          test -n "$identity"
+          echo "DEVELOPER_ID_APPLICATION=$identity" >> "$GITHUB_ENV"
+          echo "NOTARY_PROFILE=opentangerine-notary" >> "$GITHUB_ENV"
+          xcrun notarytool store-credentials "opentangerine-notary" \
+            --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" --keychain "$keychain"
+          rm -f "$cert"
       - name: Build and test
         run: |
           ./scripts/test.sh
@@ -43,6 +74,11 @@ jobs:
           test -x 'dist/Open Tangerine.app/Contents/MacOS/OpenTangerine'
           plutil -lint 'dist/Open Tangerine.app/Contents/Info.plist'
           xcrun lipo 'dist/Open Tangerine.app/Contents/MacOS/OpenTangerine' -verify_arch arm64 x86_64
+          if [[ -n "${DEVELOPER_ID_APPLICATION:-}" ]]; then
+            spctl --assess --type execute --verbose=2 'dist/Open Tangerine.app'
+          else
+            echo 'Built ad-hoc signed trial (no Developer ID secrets configured).'
+          fi
       - name: Package and publish new version
         env:
           GH_TOKEN: ${{ github.token }}

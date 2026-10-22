@@ -66,4 +66,24 @@ fi
 codesign --verify --deep --strict --verbose=2 "$app"
 test -x "$app/Contents/MacOS/OpenTangerine"
 plutil -lint "$app/Contents/Info.plist"
+
+# Opt-in notarization for release builds. Configure a notarytool keychain profile
+# once (xcrun notarytool store-credentials <profile> --apple-id ... --team-id ...)
+# and set NOTARY_PROFILE together with DEVELOPER_ID_APPLICATION.
+if [[ -n "${NOTARY_PROFILE:-}" ]]; then
+  if [[ -z "${DEVELOPER_ID_APPLICATION:-}" ]]; then
+    echo "NOTARY_PROFILE requires DEVELOPER_ID_APPLICATION; ad-hoc builds cannot be notarized." >&2
+    exit 1
+  fi
+  notarize_zip="$PWD/.build/OpenTangerine-notarize.zip"
+  rm -f "$notarize_zip"
+  ditto -c -k --sequesterRsrc --keepParent "$app" "$notarize_zip"
+  xcrun notarytool submit "$notarize_zip" --keychain-profile "$NOTARY_PROFILE" --wait
+  xcrun stapler staple "$app"
+  xcrun stapler validate "$app"
+  spctl --assess --type execute --verbose=2 "$app"
+  rm -f "$notarize_zip"
+  echo "Notarized and stapled with profile $NOTARY_PROFILE"
+fi
+
 printf 'Built %s (%s, macOS %s+)\n' "$app" "$(xcrun lipo -archs "$app/Contents/MacOS/OpenTangerine")" "$MIN_MACOS"
