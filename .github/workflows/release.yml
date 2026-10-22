@@ -90,4 +90,23 @@ jobs:
           fi
           ditto -c -k --sequesterRsrc --keepParent 'dist/Open Tangerine.app' "dist/Open-Tangerine-$VERSION-macOS.zip"
           shasum -a 256 "dist/Open-Tangerine-$VERSION-macOS.zip" > dist/SHA256SUMS.txt
-          gh release create "v$VERSION" "dist/Open-Tangerine-$VERSION-macOS.zip" dist/SHA256SUMS.txt --target "$GITHUB_SHA" --title "Open Tangerine $VERSION · Developer trial" --notes 'macOS 15+ compatibility release, universal Intel/Apple silicon binary. Preserves native Liquid Glass on macOS 26 and uses material fallback on older systems. Includes non-notched HUD positioning and radial window fixes. Thanks to Teshgotcode (#1) and Devansh-Kumar-Saini (#5). Automated macOS 15/26 build and regression checks; individual Intel hardware/desktop arrangements remain unverified. Ad-hoc signed, NOT Apple-notarized. Download, quit and replace manually; keep the previous app for rollback. https://sintaxerrorpvtltd.github.io/Open-Tangerine/#download'
+          if [[ -n "${DEVELOPER_ID_APPLICATION:-}" && -n "${NOTARY_PROFILE:-}" ]]; then
+            SIGNING_SUMMARY='Developer ID signed and Apple-notarized. Gatekeeper accepts this download; no Open Anyway step is needed.'
+          elif [[ -n "${DEVELOPER_ID_APPLICATION:-}" ]]; then
+            SIGNING_SUMMARY='Developer ID signed but NOT Apple-notarized. macOS may still block the first launch. Follow the per-app Open Anyway steps; never disable Gatekeeper globally.'
+          else
+            SIGNING_SUMMARY='Ad-hoc signed, NOT Apple-notarized. macOS may block the first launch. If macOS shows "Apple could not verify", click Done, then use System Settings > Privacy & Security > Open Anyway. Never disable Gatekeeper globally. The verified source installer is available in the repository.'
+          fi
+          notes="$(cat <<NOTES
+          Open Tangerine $VERSION · Developer trial
+
+          macOS 15+ compatibility release with a universal Intel/Apple-silicon binary. Preserves native Liquid Glass on macOS 26 and uses the material fallback on older systems. Includes non-notched HUD positioning and radial-window fixes. Thanks to Teshgotcode (#1) and Devansh-Kumar-Saini (#5). Automated macOS 15/26 build and regression checks; individual Intel hardware/desktop arrangements remain unverified.
+
+          Signing: $SIGNING_SUMMARY
+
+          Installation: download the ZIP, quit the running app, unzip and replace the app in Applications. Keep the previous copy for rollback. SHA-256 checksum: https://github.com/sintaxerrorpvtltd/Open-Tangerine/releases/download/v$VERSION/SHA256SUMS.txt
+
+          Details: https://sintaxerrorpvtltd.github.io/Open-Tangerine/#download
+          NOTES
+          )"
+          gh release create "v$VERSION" "dist/Open-Tangerine-$VERSION-macOS.zip" dist/SHA256SUMS.txt --target "$GITHUB_SHA" --title "Open Tangerine $VERSION · Developer trial" --notes "$notes"

@@ -8,7 +8,7 @@ The menu-bar Check for Updates command checks this repository's latest public Gi
 
 This is an update notification/download flow, **not automatic installation**. A signed update channel (for example Sparkle with a protected signing key), notarized binaries and rollback verification are required before shipping in-app replacement. Do not disable macOS security to install an update.
 
-The release workflow tests, builds, verifies the ad-hoc signature and publishes versioned developer-trial ZIPs. These packages are explicitly not Apple-notarized and macOS can block them. Downloading or hosting them does not bypass Gatekeeper. Published versions are never overwritten.
+The release workflow tests, builds, verifies the signature and publishes versioned developer-trial ZIPs. Unless the release notes state that a build is Developer ID signed and notarized, these packages are ad-hoc signed, are not Apple-notarized and can be blocked by macOS. Downloading or hosting them does not bypass Gatekeeper. Published versions are never overwritten.
 
 
 ## Character interaction

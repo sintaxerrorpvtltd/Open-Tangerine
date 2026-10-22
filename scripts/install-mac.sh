@@ -21,6 +21,9 @@ DEST_DIR="/Applications"
 ALLOW_UNNOTARIZED=0
 LAUNCH=1
 FORCE=0
+EXPECTED_SHA256=""
+EXPECTED_VERSION=""
+CHECKSUM_FILE=""
 
 usage() {
   cat <<'USAGE'
@@ -30,12 +33,18 @@ Build a universal app from this checkout and install it:
   ./scripts/install-mac.sh
 
 Install an already-downloaded trial ZIP or .app:
-  ./scripts/install-mac.sh --from ~/Downloads/Open-Tangerine-0.1.10-macOS.zip
+  ./scripts/install-mac.sh --from ~/Downloads/Open-Tangerine-0.1.10-macOS.zip \
+    --checksum-file ~/Downloads/SHA256SUMS.txt
 
 A quarantined, ad-hoc-signed download is rejected by Gatekeeper. If, and only
 if, you trust the exact file you downloaded, you can apply the same per-app
 decision as System Settings > Privacy & Security > Open Anyway:
-  ./scripts/install-mac.sh --from <zip-or-app> --allow-unnotarized
+  ./scripts/install-mac.sh --from <zip-or-app> --sha256 <hash> --allow-unnotarized
+
+External archives and bundles must be authenticated before installation:
+  --sha256 HEX          Expected SHA-256 of the ZIP (64 hex characters).
+  --checksum-file PATH  SHA256SUMS.txt containing the ZIP's checksum.
+  --version VERSION     Expected CFBundleShortVersionString for an .app.
 
 Options:
   --from PATH          Install PATH instead of building from source.
@@ -54,6 +63,9 @@ while [[ $# -gt 0 ]]; do
     --allow-unnotarized) ALLOW_UNNOTARIZED=1; shift ;;
     --no-launch) LAUNCH=0; shift ;;
     --force) FORCE=1; shift ;;
+    --sha256) EXPECTED_SHA256="${2:-}"; [[ -n "$EXPECTED_SHA256" ]] || { echo "--sha256 needs a digest" >&2; exit 2; }; shift 2 ;;
+    --checksum-file) CHECKSUM_FILE="${2:-}"; [[ -n "$CHECKSUM_FILE" ]] || { echo "--checksum-file needs a path" >&2; exit 2; }; shift 2 ;;
+    --version) EXPECTED_VERSION="${2:-}"; [[ -n "$EXPECTED_VERSION" ]] || { echo "--version needs a version" >&2; exit 2; }; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
@@ -62,6 +74,30 @@ done
 # Keep user-supplied relative paths relative to where the command was run.
 [[ -n "$SOURCE" && "$SOURCE" != /* ]] && SOURCE="$START_DIR/$SOURCE"
 [[ "$DEST_DIR" != /* ]] && DEST_DIR="$START_DIR/$DEST_DIR"
+[[ -n "$CHECKSUM_FILE" && "$CHECKSUM_FILE" != /* ]] && CHECKSUM_FILE="$START_DIR/$CHECKSUM_FILE"
+
+if [[ -n "$EXPECTED_SHA256" && -n "$CHECKSUM_FILE" ]]; then
+  echo "Use either --sha256 or --checksum-file, not both." >&2
+  exit 2
+fi
+if [[ -n "$EXPECTED_SHA256" && ! "$EXPECTED_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]; then
+  echo "--sha256 must be a 64-character hexadecimal SHA-256 digest." >&2
+  exit 2
+fi
+if [[ -n "$EXPECTED_SHA256" && ( -z "$SOURCE" || "$SOURCE" != *.zip ) ]]; then
+  echo "--sha256 only applies with --from a downloaded ZIP." >&2
+  exit 2
+fi
+if [[ -n "$CHECKSUM_FILE" ]]; then
+  if [[ -z "$SOURCE" || "$SOURCE" != *.zip ]]; then
+    echo "--checksum-file only applies with --from a downloaded ZIP." >&2
+    exit 2
+  fi
+  if [[ ! -r "$CHECKSUM_FILE" ]]; then
+    echo "Checksum file not found or unreadable: $CHECKSUM_FILE" >&2
+    exit 1
+  fi
+fi
 
 macos_version="$(sw_vers -productVersion)"
 macos_major="${macos_version%%.*}"
@@ -77,7 +113,16 @@ case "$host_arch" in
 esac
 
 work_dir="$(mktemp -d "${TMPDIR:-/tmp}/open-tangerine-install.XXXXXX")"
-cleanup() { rm -rf "$work_dir"; }
+staged=""
+cleanup() {
+  local status=$?
+  trap - EXIT
+  rm -rf "$work_dir"
+  if [[ -n "$staged" ]]; then
+    rm -rf "$staged"
+  fi
+  exit "$status"
+}
 trap cleanup EXIT
 
 source_app=""
@@ -90,17 +135,43 @@ else
     echo "Not found: $SOURCE" >&2
     exit 1
   fi
-  if [[ "$SOURCE" == *.zip ]]; then
-    echo "SHA-256: $(shasum -a 256 "$SOURCE" | awk '{print $1}')"
-    echo "Compare this with the SHA-256 published with the release before trusting it."
-  fi
   case "$SOURCE" in
     *.zip)
+      expected_hash=""
+      if [[ -n "$EXPECTED_SHA256" ]]; then
+        expected_hash="$(printf '%s' "$EXPECTED_SHA256" | tr 'A-F' 'a-f')"
+      elif [[ -n "$CHECKSUM_FILE" ]]; then
+        expected_hash="$(awk -v name="$(basename "$SOURCE")" '
+          { hash=$1; file=$0; sub(/^[^[:space:]]+[[:space:]]+/, "", file); sub(/^\*/, "", file); sub(/\r$/, "", file);
+            if (file == name) { print tolower(hash); exit } }' "$CHECKSUM_FILE")"
+        if [[ -z "$expected_hash" ]]; then
+          echo "No checksum for $(basename "$SOURCE") in $CHECKSUM_FILE." >&2
+          exit 1
+        fi
+      fi
+      if [[ -z "$expected_hash" ]]; then
+        echo "Refusing to install a ZIP without an expected checksum." >&2
+        echo "Pass --sha256 <digest> or --checksum-file SHA256SUMS.txt." >&2
+        exit 1
+      fi
+      actual_hash="$(shasum -a 256 "$SOURCE" | awk '{print tolower($1)}')"
+      if [[ "$actual_hash" != "$expected_hash" ]]; then
+        echo "SHA-256 mismatch; refusing to install." >&2
+        echo "Expected: $expected_hash" >&2
+        echo "Actual:   $actual_hash" >&2
+        exit 1
+      fi
+      echo "SHA-256 verified: $actual_hash"
       echo "Extracting $(basename "$SOURCE")…"
       ditto -x -k "$SOURCE" "$work_dir/extracted"
       source_app="$(find "$work_dir/extracted" -maxdepth 2 -name "${APP_NAME}.app" -type d -print -quit)"
       ;;
     *)
+      if [[ -z "$EXPECTED_VERSION" ]]; then
+        echo "Refusing to install an app from a path without --version." >&2
+        echo "Pass --version <CFBundleShortVersionString> after checking the release." >&2
+        exit 1
+      fi
       source_app="$SOURCE"
       ;;
   esac
@@ -129,6 +200,15 @@ if ! codesign --verify --deep --strict "$source_app" >/dev/null 2>&1; then
 fi
 
 version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$source_app/Contents/Info.plist" 2>/dev/null || echo unknown)"
+if [[ -n "$EXPECTED_VERSION" ]]; then
+  if [[ "$version" != "$EXPECTED_VERSION" ]]; then
+    echo "Version mismatch; refusing to install." >&2
+    echo "Expected: $EXPECTED_VERSION" >&2
+    echo "Actual:   $version" >&2
+    exit 1
+  fi
+  echo "Version verified: $version"
+fi
 signature="$(codesign -dv "$source_app" 2>&1 | awk -F= '/^Authority=/{print $2; exit}')"
 signature="${signature:-ad-hoc}"
 quarantined=0
@@ -171,28 +251,84 @@ if [[ ! -w "$DEST_DIR" ]]; then
 fi
 
 installed="$DEST_DIR/${APP_NAME}.app"
+staged="$DEST_DIR/.${APP_NAME}.installing.$$"
+old_temp="$DEST_DIR/.${APP_NAME}.previous.$$"
+backup=""
+
+if [[ -e "$staged" || -e "$old_temp" ]]; then
+  echo "Temporary install paths already exist; refusing to overwrite them:" >&2
+  echo "  $staged" >&2
+  echo "  $old_temp" >&2
+  exit 1
+fi
+
+rollback_install() {
+  local reason="$1"
+  echo "$reason" >&2
+  rm -rf "$installed"
+  if [[ -n "$old_temp" && -d "$old_temp" ]]; then
+    if mv "$old_temp" "$installed"; then
+      echo "Previous app restored." >&2
+    else
+      echo "Previous app could not be restored automatically. It is at: $old_temp" >&2
+    fi
+  fi
+}
+
+echo "Staging the new app in ${DEST_DIR}…"
+ditto "$source_app" "$staged"
+
+if [[ "$quarantined" == "1" && "$ALLOW_UNNOTARIZED" == "1" ]]; then
+  xattr -dr com.apple.quarantine "$staged"
+fi
+
+staged_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$staged/Contents/Info.plist" 2>/dev/null || echo unknown)"
+if [[ "$staged_version" != "$version" ]]; then
+  echo "Staged bundle version $staged_version does not match $version; nothing was replaced." >&2
+  exit 1
+fi
+if ! codesign --verify --deep --strict "$staged" >/dev/null 2>&1; then
+  echo "Staged bundle failed signature verification; nothing was replaced." >&2
+  exit 1
+fi
+if [[ ! -x "$staged/Contents/MacOS/OpenTangerine" ]]; then
+  echo "Staged bundle is missing its executable; nothing was replaced." >&2
+  exit 1
+fi
+
 if [[ -d "$installed" ]]; then
-  if [[ "$FORCE" == "1" ]]; then
-    rm -rf "$installed"
-  else
+  if [[ "$FORCE" != "1" ]]; then
     backup_root="$HOME/Library/Application Support/Open Tangerine/Backups"
     mkdir -p "$backup_root"
     backup="$backup_root/${APP_NAME} ${version} $(date +%Y%m%d-%H%M%S)-$$.app"
     echo "Backing up the existing app to $backup"
     ditto "$installed" "$backup"
-    rm -rf "$installed"
   fi
+  echo "Replacing $installed atomically…"
+  if ! mv "$installed" "$old_temp"; then
+    echo "Could not move the existing app aside; nothing was replaced." >&2
+    exit 1
+  fi
+else
+  echo "Installing to ${installed}…"
 fi
 
-echo "Installing to $installed"
-ditto "$source_app" "$installed"
+if ! mv "$staged" "$installed"; then
+  rollback_install "Could not move the staged app into place."
+  exit 1
+fi
+staged=""
 
-if [[ "$quarantined" == "1" && "$ALLOW_UNNOTARIZED" == "1" ]]; then
-  xattr -dr com.apple.quarantine "$installed"
+if ! codesign --verify --deep --strict "$installed" >/dev/null 2>&1; then
+  rollback_install "Installed app failed signature verification."
+  exit 1
+fi
+if [[ ! -x "$installed/Contents/MacOS/OpenTangerine" ]]; then
+  rollback_install "Installed app is missing its executable."
+  exit 1
 fi
 
-codesign --verify --deep --strict "$installed"
-test -x "$installed/Contents/MacOS/OpenTangerine"
+rm -rf "$old_temp"
 
 echo "Installed ${APP_NAME} ${version} (${archs}) on macOS ${macos_version}."
 
@@ -204,6 +340,9 @@ if [[ "$LAUNCH" == "1" ]]; then
   else
     echo "The app did not stay running. Check Console.app or run:" >&2
     echo "  \"$installed/Contents/MacOS/OpenTangerine\"" >&2
+    if [[ -n "$backup" ]]; then
+      echo "The previous version is backed up at: $backup" >&2
+    fi
     exit 1
   fi
 fi

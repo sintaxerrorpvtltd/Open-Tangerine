@@ -25,11 +25,11 @@ The illustrations below demonstrate the **Mac app**. The remaining Mac-specific 
 
 **[Website, download and installation guide](https://sintaxerrorpvtltd.github.io/Open-Tangerine/)** · [GitHub releases](https://github.com/sintaxerrorpvtltd/Open-Tangerine/releases)
 
-Download the trial ZIP, quit the previous app, unzip, then drag Open Tangerine into Applications and choose Replace if updating. macOS may block this unnotarized trial; see the website for Apple's official per-app opening guidance. Never disable Gatekeeper globally. Check for Updates opens the website with your installed version; the website compares published releases and provides a manual download. No Apple Developer subscription is required for update checks or hosting.
+Download the trial ZIP, quit the previous app, unzip, then drag Open Tangerine into Applications and choose Replace if updating. Each release states its signing mode in the release notes. Ad-hoc-signed releases can be blocked by macOS; notarized releases are accepted normally. See the website for Apple's official per-app opening guidance if the release is ad-hoc. Never disable Gatekeeper globally. Check for Updates opens the website with your installed version; the website compares published releases and provides a manual download. No Apple Developer subscription is required for update checks or hosting.
 
 ### If macOS says it cannot verify the app
 
-The public trial is **ad-hoc signed, not Apple-notarized**. On first launch Gatekeeper shows “Apple could not verify…” and offers **Move to Bin**. This is expected for this trial and is not an Intel or macOS 15 incompatibility: the release is a universal binary that builds and runs on Intel macOS 15.
+When a release is **ad-hoc signed, not Apple-notarized** (the current v0.1.10 trial is), first launch can show “Apple could not verify…” and offer **Move to Bin**. This is expected for an ad-hoc trial and is not an Intel or macOS 15 incompatibility: the release is a universal binary that builds and runs on Intel macOS 15. Releases that the notes mark as **Developer ID signed and notarized** do not show this warning.
 
 To open the exact download you trust:
 
@@ -48,15 +48,17 @@ cd Open-Tangerine
 
 The installer builds a universal Intel/Apple-silicon app, verifies its signature, backs up an existing copy, installs it to `/Applications` and launches it.
 
-Terminal users who already have the ZIP can apply the per-app decision directly after checking its SHA-256 against the release notes:
+Terminal users who already have the ZIP must provide its expected checksum before installation. Download `SHA256SUMS.txt` from the release, then run:
 
 ```sh
-./scripts/install-mac.sh --from ~/Downloads/Open-Tangerine-0.1.10-macOS.zip --allow-unnotarized
+./scripts/install-mac.sh --from ~/Downloads/Open-Tangerine-0.1.10-macOS.zip \
+  --checksum-file ~/Downloads/SHA256SUMS.txt \
+  --allow-unnotarized
 ```
 
-`--allow-unnotarized` removes `com.apple.quarantine` from that installed bundle only. It never disables Gatekeeper globally. Without the flag, the installer refuses quarantined downloads.
+The installer verifies the ZIP before extraction and refuses a missing or mismatched checksum. For an already-extracted `.app`, pass `--version 0.1.10` instead. `--allow-unnotarized` removes `com.apple.quarantine` from that installed bundle only. It never disables Gatekeeper globally. Without the flag, the installer refuses quarantined downloads.
 
-Maintainers with a Developer ID can produce a trusted download by setting `DEVELOPER_ID_APPLICATION` and `NOTARY_PROFILE`; `scripts/build-app.sh` then signs with hardened runtime, submits to Apple's notary service, and staples the ticket. The release workflow does the same when these repository secrets are configured: `MACOS_CERTIFICATE_P12`, `MACOS_CERTIFICATE_PASSWORD`, `KEYCHAIN_PASSWORD`, `APPLE_ID`, `APPLE_TEAM_ID` and `APPLE_APP_PASSWORD`. Without all of them, releases stay ad-hoc signed and macOS can still block public trial downloads.
+Maintainers with a Developer ID can produce a trusted download by setting `DEVELOPER_ID_APPLICATION` and `NOTARY_PROFILE`; `scripts/build-app.sh` then signs with hardened runtime, submits to Apple's notary service, and staples the ticket. The release workflow does the same when these repository secrets are configured: `MACOS_CERTIFICATE_P12`, `MACOS_CERTIFICATE_PASSWORD`, `KEYCHAIN_PASSWORD`, `APPLE_ID`, `APPLE_TEAM_ID` and `APPLE_APP_PASSWORD`. Without all of them, releases stay ad-hoc signed and macOS can still block public trial downloads. The generated release notes state the actual signing mode, so download guidance does not claim notarization that did not happen.
 
 ## See it in motion
 
@@ -93,7 +95,7 @@ cd Open-Tangerine
 ./scripts/install-mac.sh
 ```
 
-This builds a universal Intel/Apple-silicon app, verifies it and installs it to `/Applications`. To build without installing, run `./scripts/build-app.sh` and open `dist/Open Tangerine.app`; the local build is ad-hoc signed, not Apple-notarized, but it has no quarantine flag. We do not recommend disabling Gatekeeper. A signed, notarized release and automatic updates are planned.
+This builds a universal Intel/Apple-silicon app, verifies it and installs it to `/Applications`. To build without installing, run `./scripts/build-app.sh` and open `dist/Open Tangerine.app`; the local build is ad-hoc signed, not Apple-notarized, but it has no quarantine flag. We do not recommend disabling Gatekeeper. A signed, notarized release (once Developer ID credentials are configured) and automatic updates are planned.
 
 Optional: install FFmpeg from your trusted package manager (`brew install ffmpeg` if you already use Homebrew). Settings → Formats shows whether FFmpeg is available. It is already present on the development Mac. We do not bundle or silently download it.
 
