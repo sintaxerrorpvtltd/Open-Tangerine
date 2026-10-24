@@ -8,7 +8,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QObject, QTimer, QProcess, Signal
 from PySide6.QtGui import QCursor, QPainter, QRegion
 from PySide6.QtWidgets import QWidget, QApplication
-from engine import IMAGE_INPUTS, IMAGE_OUTPUTS, MEDIA_INPUTS, MEDIA_OUTPUTS, source_file
+from engine import IMAGE_INPUTS, IMAGE_OUTPUTS, MEDIA_INPUTS, MEDIA_OUTPUTS, DOCX_OUTPUTS, source_file
 from glass_design import draw_ring, draw_hub, target_at
 
 
@@ -25,6 +25,8 @@ def available_formats(paths, ffmpeg=False):
         return ['SRT → VTT']
     if suffixes == {'.vtt'}:
         return ['VTT → SRT']
+    if suffixes == {'.docx'}:
+        return list(DOCX_OUTPUTS)
     if suffixes <= MEDIA_INPUTS.keys() and ffmpeg:
         audio = {'.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac'}
         return list(MEDIA_OUTPUTS) if not suffixes & audio else ['MP3', 'WAV', 'FLAC', 'OGG']

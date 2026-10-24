@@ -21,7 +21,7 @@ The new **0.2.2 early desktop trial** is a separate implementation with a smalle
 
 Desktop packages are published only after both CI jobs pass conversion tests and packaged startup/conversion checks. If the download page does not show a package yet, verification is still pending or the release could not be checked.
 
-Windows/Linux include image conversion, resize/rotate, image-to-PDF, PDF merge/split/text extraction, simple SRT/VTT, SHA-256 and optional FFmpeg media conversion. Windows adds an **opt-in experimental Explorer/Desktop Shift drag wheel and tray**; Linux uses the app window. **No physical notch, HEIC/SVG, Office conversion, OCR or full Mac editor parity in this edition.** Drop files into its window. Each failed file is reported independently. Originals and existing outputs are preserved. Workers have limits but are not an OS security sandbox; use trusted files. [Detailed limits](Desktop/README.md#limits-and-safety).
+Windows/Linux include image conversion, resize/rotate, image-to-PDF, PDF merge/split/text extraction, Word .docx to plain text or a text-only PDF, simple SRT/VTT, SHA-256 and optional FFmpeg media conversion. Windows adds an **opt-in experimental Explorer/Desktop Shift drag wheel and tray**; Linux uses the app window. **No physical notch, HEIC/SVG, formatted Office conversion, OCR or full Mac editor parity in this edition.** Drop files into its window. Each failed file is reported independently. Originals and existing outputs are preserved. Workers have limits but are not an OS security sandbox; use trusted files. [Detailed limits](Desktop/README.md#limits-and-safety).
 
 The illustrations below demonstrate the **Mac app**. The remaining Mac-specific sections describe its own capabilities.
 

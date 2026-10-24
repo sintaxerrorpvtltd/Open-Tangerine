@@ -26,3 +26,16 @@ if ff:
   data=json.loads(result.stdout);assert data['ok']
   subprocess.run([ff,'-nostdin','-v','error','-xerror','-threads','1','-i',data['outputs'][0],'-f','null','-'],check=True,timeout=30)
  print('PASS: packaged video conversion and full output decode')
+
+# DOCX parsing and the PDF writer load lazily inside the frozen worker.
+import sys
+sys.path.insert(0,str(root/'tests'))
+from docx_fixtures import write_docx,para,run
+from pypdf import PdfReader
+with tempfile.TemporaryDirectory() as folder:
+ p=write_docx(Path(folder)/'input.docx',para(run('Packaged DOCX check'))+para(run('Second page'),page_before=True))
+ r=subprocess.run([str(exe),'--worker'],input=json.dumps({'paths':[str(p)],'target':'DOCX → PDF (text only)','output':folder}),text=True,capture_output=True,timeout=30)
+ if r.returncode!=0:raise RuntimeError(r.stderr or r.stdout)
+ data=json.loads(r.stdout);assert data['ok'];pdf=PdfReader(data['outputs'][0])
+ assert len(pdf.pages)==2 and 'Packaged DOCX check' in pdf.pages[0].extract_text(),data
+print('PASS: packaged DOCX to text-only PDF worker conversion')

@@ -11,7 +11,8 @@ IMAGE_INPUTS = {'.png', '.jpg', '.jpeg', '.webp', '.bmp', '.tif', '.tiff', '.avi
 IMAGE_OUTPUTS = {'PNG': 'png', 'JPEG': 'jpg', 'WEBP': 'webp', 'TIFF': 'tiff', 'BMP': 'bmp'}
 MEDIA_INPUTS = {'.mp4': 'mov', '.mov': 'mov', '.m4v': 'mov', '.mkv': 'matroska', '.webm': 'matroska', '.mp3': 'mp3', '.wav': 'wav', '.flac': 'flac', '.ogg': 'ogg', '.m4a': 'mov', '.aac': 'aac'}
 MEDIA_OUTPUTS = {'MP4': ('mp4', ['-c:v','libx264','-preset','fast','-crf','23','-c:a','aac','-movflags','+faststart']), 'WEBM': ('webm',['-c:v','libvpx-vp9','-deadline','realtime','-cpu-used','6','-c:a','libopus']), 'MP3': ('mp3',['-vn','-c:a','libmp3lame','-b:a','192k']), 'WAV': ('wav',['-vn','-c:a','pcm_s16le']), 'FLAC': ('flac',['-vn','-c:a','flac']), 'OGG': ('ogg',['-vn','-c:a','libvorbis'])}
-OPERATIONS = list(IMAGE_OUTPUTS) + ['Image → PDF', 'PDF → Text', 'Merge PDFs', 'Split PDF', 'SRT → VTT', 'VTT → SRT', 'SHA-256'] + list(MEDIA_OUTPUTS)
+DOCX_OUTPUTS = {'DOCX → Text': 'txt', 'DOCX → PDF (text only)': 'pdf'}
+OPERATIONS = list(IMAGE_OUTPUTS) + ['Image → PDF', 'PDF → Text', 'Merge PDFs', 'Split PDF', *DOCX_OUTPUTS, 'SRT → VTT', 'VTT → SRT', 'SHA-256'] + list(MEDIA_OUTPUTS)
 class ConversionError(ValueError): pass
 
 def source_file(raw):
@@ -178,6 +179,20 @@ def convert(job):
                         pieces.append(item)
                         if sum(x.stat().st_size for x in pieces)>MAX_OUTPUT: raise ConversionError('Split outputs exceed 512 MiB.')
                     for i,item in enumerate(pieces):results.append(publish(item,folder,f'{p.stem}-page-{i+1}','pdf'))
+        elif target in DOCX_OUTPUTS:
+            if p.suffix.lower()!='.docx': raise ConversionError('Select a Word .docx document.')
+            from docx_text import extract_docx, DocxError, PAGE_BREAK
+            from text_pdf import write_text_pdf, TextPdfError
+            try:
+                lines=extract_docx(p)
+                if not any(line.strip() for line in lines if line!=PAGE_BREAK):
+                    raise ConversionError('No body or table text found; images, text boxes, headers and footers are not extracted.')
+                if target=='DOCX → Text':
+                    with stage.open('w',encoding='utf8',newline='\n') as f:
+                        f.write('\n'.join('' if line==PAGE_BREAK else line for line in lines)+'\n')
+                else:write_text_pdf(lines,stage)
+            except (DocxError,TextPdfError) as e: raise ConversionError(str(e)) from e
+            results.append(publish(stage,folder,stem,DOCX_OUTPUTS[target]))
         elif target in MEDIA_OUTPUTS:
             media(p,stage,target,job.get('ffmpeg',''));results.append(publish(stage,folder,stem,MEDIA_OUTPUTS[target][0]))
         elif target=='SHA-256':
