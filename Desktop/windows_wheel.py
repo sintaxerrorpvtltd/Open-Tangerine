@@ -333,7 +333,10 @@ class WindowsShiftWheel(QObject):
         self.window.clear_files(); self.window.add_paths(paths)
         if len(self.window.paths) != len(paths): return
         self.window.target.setCurrentText(target)
+        previous = self.window.batch
         self.window.start()
+        if self.window.island and self.window.batch is not previous:
+            self.window.island.track(self.window.batch, target, len(paths))
 
     def stop(self):
         self.timer.stop(); self.timeout.stop(); self.overlay.close(); self.lookup.kill()
