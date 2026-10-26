@@ -16,7 +16,9 @@ Drop local files **into the app window**, or click Add files. Choose an output/t
 
 Images: PNG, JPEG, WebP, TIFF and BMP output; PNG/JPEG/WebP/TIFF/BMP/AVIF input. JPEG transparency is flattened against white. Optional maximum-side resizing and clockwise rotation. Animated and multipage images are rejected instead of silently discarding frames. HEIC, SVG and RAW are not supported by this trial.
 
-PDF: image to PDF, merge, split into single-page files, extract existing text. No OCR, Word conversion, encrypted PDFs or general Office support. PDF operations can retain active content/links; this is not a PDF sanitizer.
+PDF: image to PDF, merge, split into single-page files, extract existing text. No OCR, encrypted PDFs or general Office support.
+
+Word: **DOCX → Text** and **DOCX → PDF (text only)** extract the body paragraphs and table rows of a `.docx` (table cells become tab-separated columns). Formatting, images, text boxes, hidden text, headers, footers, footnotes, comments and deleted tracked changes are not kept; inserted tracked changes are. The PDF lays that text out on A4 pages in the standard Helvetica font, so it supports Western European Latin text only: documents with other scripts are rejected with the first unsupported character named, and DOCX → Text keeps them. Long table cells can push later columns past their tab stop. The package is read in memory with size limits and is never extracted to disk; DTD/entity declarations, macro-enabled, encrypted and legacy `.doc` files are rejected. Not a sanitizer: it does not open links or embedded objects, and the output contains only text. PDF operations can retain active content/links; this is not a PDF sanitizer.
 
 Media: MP4, WebM, MP3, WAV, FLAC and Ogg output from supported local audio/video inputs. Select a **trusted, separately installed FFmpeg executable** using Set FFmpeg. The app does not install or bundle it. Codec support depends on that installation. No playlists or network URLs. Basic SRT/VTT subtitle conversion and SHA-256 file checksums are also included.
 
