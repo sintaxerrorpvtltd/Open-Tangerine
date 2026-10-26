@@ -89,7 +89,7 @@ class IslandTests(unittest.TestCase):
             self.assertTrue(island.isVisible())
             self.assertTrue(island.title.text().startswith('Couldn’t convert 1 of 1'))
             self.assertTrue(island.detail.property('failed'))
-            self.assertEqual(island.detail.text(), window.batch_errors[0][:160])
+            self.assertEqual(island.detail.text(), window.batch_errors[0])
             self.assertFalse(island.retract_timer.isActive())
             self.assertTrue(island.dismiss_button.isVisibleTo(island))
             self.assertFalse(island.folder_button.isVisibleTo(island))
@@ -156,6 +156,18 @@ class IslandTests(unittest.TestCase):
         island.set_style('Off'); self.assertFalse(island.isVisible())
         island.set_style('unknown'); self.assertEqual(island.style_name, 'Pure black')
         island.stop(); window.close()
+
+    def test_off_during_batch_restores_tray_feedback(self):
+        window = Window(global_wheel=False); window.island = ConversionIsland(window)
+        batch = FakeBatch(); window.batch = batch
+        window.island.track(batch, 'PNG', 1)
+        window.island.set_style('Off')
+        self.assertFalse(window.island.handles(batch))
+        window.outputs = []; window.batch_errors = ['failed']
+        batch.finished.emit()
+        self.assertEqual(window.island.phase, 'idle')
+        self.assertFalse(window.island.retract_timer.isActive())
+        window.batch = None; window.close()
 
     def test_island_never_takes_drops_or_focus(self):
         island = ConversionIsland(Mock())

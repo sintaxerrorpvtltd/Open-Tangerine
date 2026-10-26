@@ -3,7 +3,7 @@ from __future__ import annotations
 import errno, hashlib, json, os, re, shutil, stat, subprocess, tempfile, time, warnings
 from pathlib import Path
 
-VERSION = '0.2.2'
+VERSION = '0.2.3'
 MAX_BYTES = 100 * 1024 * 1024
 MAX_PIXELS = 40_000_000
 MAX_OUTPUT = 512 * 1024 * 1024

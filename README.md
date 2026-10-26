@@ -11,13 +11,13 @@ Local processing, no account, no subscription. GPL-3.0-only. Safety limits apply
 
 ## Windows and Linux desktop edition
 
-The new **0.2.2 early desktop trial** is a separate implementation with a smaller feature set. [Download status and installation](https://sintaxerrorpvtltd.github.io/Open-Tangerine/#desktop) · [Desktop source and guide](Desktop/README.md) · [Windows/Linux build checks](https://github.com/sintaxerrorpvtltd/Open-Tangerine/actions/workflows/desktop.yml).
+The new **0.2.3 early desktop trial** is a separate implementation with a smaller feature set. [Download status and installation](https://sintaxerrorpvtltd.github.io/Open-Tangerine/#desktop) · [Desktop source and guide](Desktop/README.md) · [Windows/Linux build checks](https://github.com/sintaxerrorpvtltd/Open-Tangerine/actions/workflows/desktop.yml).
 
 | Platform | Interface | Availability / requirements |
 |---|---|---|
 | macOS | Native menu bar, global drag wheel and notch | v0.1.10; macOS 15+, universal Intel/Apple silicon build |
-| Windows | Batch window, glass format picker, opt-in Explorer Shift wheel with a top-of-screen progress island, and tray | 0.2.2 early trial; Windows 10/11 x64; unsigned portable ZIP |
-| Linux | Batch file-drop window and progress panel | 0.2.2 early trial; x64 Ubuntu 24.04 / glibc 2.39+; portable tar.gz |
+| Windows | Batch window, glass format picker, opt-in Explorer Shift wheel with a top-of-screen progress island, and tray | 0.2.3 early trial; Windows 10/11 x64; unsigned portable ZIP |
+| Linux | Batch file-drop window and progress panel | 0.2.3 early trial; x64 Ubuntu 24.04 / glibc 2.39+; portable tar.gz |
 
 Desktop packages are published only after both CI jobs pass conversion tests and packaged startup/conversion checks. If the download page does not show a package yet, verification is still pending or the release could not be checked.
 

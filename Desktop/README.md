@@ -1,11 +1,11 @@
-# Open Tangerine — Windows and Linux trial 0.2.2
+# Open Tangerine — Windows and Linux trial 0.2.3
 
 This is an early cross-platform desktop edition, not a port of every Mac feature.
 No account, telemetry, uploads, administrator service or automatic downloads.
 
 ## Install
 
-- **Windows 10/11 x64:** extract the entire Windows ZIP into a local folder. Run `OpenTangerine.exe` inside it. Keep `_internal` alongside it. This trial is unsigned; Windows may warn about an unknown publisher. Do not disable Defender or SmartScreen globally. Do not run a file flagged as malware; report the exact warning.
+- **Windows 10/11 x64:** extract the entire Windows ZIP into a local folder. Run `OpenTangerine.exe` inside it. Keep `_internal` and `OpenTangerineWorker.exe` alongside it. The GUI is built without a console; the app launches the separate worker with redirected pipes and no console window. This trial is unsigned; Windows may warn about an unknown publisher. Do not disable Defender or SmartScreen globally. Do not run a file flagged as malware; report the exact warning.
 - **Linux x64:** Ubuntu 24.04 or a compatible glibc 2.39+ desktop. Extract the `.tar.gz`, then run `OpenTangerine`. X11 or Wayland desktop libraries are required. Other distributions and ARM are unverified. No root installation is needed.
 - Keep this folder to uninstall/remove it later. Updating: quit the app, extract the new package into a separate folder and launch it. Keep the old folder if you want rollback.
 - Check the asset's SHA-256 against its companion `.sha256` file. This detects corruption; it is not a publisher signature.
@@ -18,7 +18,7 @@ Images: PNG, JPEG, WebP, TIFF and BMP output; PNG/JPEG/WebP/TIFF/BMP/AVIF input.
 
 PDF: image to PDF, merge, split into single-page files, extract existing text. No OCR, encrypted PDFs or general Office support.
 
-Word: **DOCX → Text** and **DOCX → PDF (text only)** extract the body paragraphs and table rows of a `.docx` (table cells become tab-separated columns). Formatting, images, text boxes, hidden text, headers, footers, footnotes, comments and deleted tracked changes are not kept; inserted tracked changes are. The PDF lays that text out on A4 pages in the standard Helvetica font, so it supports Western European Latin text only: documents with other scripts are rejected with the first unsupported character named, and DOCX → Text keeps them. Long table cells can push later columns past their tab stop. The package is read in memory with size limits and is never extracted to disk; DTD/entity declarations, macro-enabled, encrypted and legacy `.doc` files are rejected. Not a sanitizer: it does not open links or embedded objects, and the output contains only text. PDF operations can retain active content/links; this is not a PDF sanitizer.
+Word: **DOCX → Text** and **DOCX → PDF (text only)** extract the body paragraphs and table rows of a `.docx` (table cells become tab-separated columns). Formatting, images, text boxes, explicitly hidden runs, headers, footers, footnotes, comments and deleted tracked changes are not kept; inserted tracked changes are. The PDF lays that text out on A4 pages in the standard Helvetica font, so it supports Western European Latin text only: documents with other scripts are rejected with the first unsupported character named, and DOCX → Text keeps them. Long table cells can push later columns past their tab stop. The package is read in memory with size limits and is never extracted to disk; DTD/entity declarations, macro-enabled, encrypted and legacy `.doc` files are rejected. Not a sanitizer: it does not open links or embedded objects, and the output contains only text. PDF operations can retain active content/links; this is not a PDF sanitizer.
 
 Media: MP4, WebM, MP3, WAV, FLAC and Ogg output from supported local audio/video inputs. Select a **trusted, separately installed FFmpeg executable** using Set FFmpeg. The app does not install or bundle it. Codec support depends on that installation. No playlists or network URLs. Basic SRT/VTT subtitle conversion and SHA-256 file checksums are also included.
 
@@ -53,3 +53,5 @@ Downloads: https://sintaxerrorpvtltd.github.io/Open-Tangerine/#desktop
 Copyright 2026 Sintax Error Private Limited. GPL-3.0-only; dependencies retain their licenses. Qt libraries are distributed dynamically in `_internal` and can be replaced with compatible builds. Dependency versions and license texts are included. For corresponding dependency source, use the exact version tags at https://code.qt.io/pyside/pyside-setup.git/ , https://code.qt.io/qt/qtbase.git/ , https://github.com/python-pillow/Pillow and https://github.com/py-pdf/pypdf . No modifications are made to those dependencies. Python is included under the PSF license; PyInstaller's bootloader uses its distribution exception.
 
 Linux GUI packaging is exercised with the real xcb plugin under Xvfb; this does not verify every physical desktop or Wayland compositor.
+
+Contributor integrations: [progress island (#16)](https://github.com/sintaxerrorpvtltd/Open-Tangerine/pull/16) and [bounded DOCX text export (#18)](https://github.com/sintaxerrorpvtltd/Open-Tangerine/pull/18). Maintainer fixes add encoding-independent DTD rejection, UTF-8 byte limits and notification fallback when the island is switched Off.

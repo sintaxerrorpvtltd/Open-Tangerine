@@ -51,12 +51,15 @@ def read_part(archive, name, limit):
     return data
 
 
-def parse(data):
-    # DOCX parts never need a DTD; refusing one rules out entity expansion.
-    if b'<!DOCTYPE' in data or b'<!ENTITY' in data:
+class NoDoctype(ET.TreeBuilder):
+    def doctype(self, name, pubid, system):
+        # Parser callbacks see declarations in UTF-8/UTF-16 alike, before expansion.
         raise DocxError('Word documents with DTD or entity declarations are not supported.')
+
+
+def parse(data):
     try:
-        return ET.fromstring(data)
+        return ET.fromstring(data, parser=ET.XMLParser(target=NoDoctype()))
     except ET.ParseError as e:
         raise DocxError('The Word document XML is damaged.') from e
 
@@ -201,7 +204,7 @@ def extract_docx(path):
 
     def add(new):
         nonlocal size
-        size += sum(len(line) + 1 for line in new)
+        size += sum(len(line.encode('utf-8')) + 1 for line in new)
         if size > MAX_TEXT:
             raise DocxError('Extracted text is too large.')
         lines.extend(new)

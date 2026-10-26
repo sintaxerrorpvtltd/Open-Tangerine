@@ -107,7 +107,7 @@ class ConversionIsland(QWidget):
         self.update()
 
     def handles(self, batch):
-        return batch is not None and self.batch is batch
+        return self.style_name != 'Off' and batch is not None and self.batch is batch
 
     def track(self, batch, target, count):
         """Follow a batch started by the Shift wheel. Returns False when disabled."""
@@ -154,9 +154,9 @@ class ConversionIsland(QWidget):
             self.set_detail(f'{len(self.outputs)} completed output(s) kept')
         elif errors:
             self.phase = 'failed'
-            failed = len(errors)
+            failed = self.count if self.target == 'Merge PDFs' else len(errors)
             self.title.setText(f'Couldn’t convert {failed} of {self.count} to {label}')
-            self.set_detail(errors[0][:160], failed=True)
+            self.set_detail(errors[0], failed=True)
         else:
             self.phase = 'done'
             noun = 'file' if self.count == 1 else 'files'
@@ -216,6 +216,7 @@ class ConversionIsland(QWidget):
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(self.outputs[-1]).parent)))
 
     def stop(self):
+        self.batch = None
         self.retract_timer.stop(); self.motion.stop()
         self.retracting = False
         self.hide()

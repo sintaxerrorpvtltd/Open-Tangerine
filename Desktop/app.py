@@ -131,7 +131,7 @@ class Window(QMainWindow):
             self.settings.setValue('ffmpeg',str(Path(path).resolve()));self.status.setText('FFmpeg selected. It runs only when you request media conversion.')
     def ffmpeg_path(self):return self.settings.value('ffmpeg','')
     def show_limits(self):
-        QMessageBox.information(self,'Trial capabilities','Images: PNG, JPEG, WebP, TIFF, BMP output; PNG/JPEG/WebP/TIFF/BMP/AVIF input. Resize and rotate. Single-frame only; 40 megapixels. HEIC and SVG are not supported in this trial.\n\nPDF: image to PDF, merge (up to 200 pages), split and extract text. No OCR or password-protected PDFs.\n\nWord: .docx body and table text to plain text, or to a text-only PDF in Helvetica (Latin text only). Formatting, images, hidden text, headers, footers and notes are not kept. No .doc, macro-enabled or encrypted files.\n\nMedia: MP4/WebM/MP3/WAV/FLAC/Ogg using a separately selected FFmpeg. Codecs depend on your installation. No FFmpeg download is performed.\n\nSimple SRT/VTT conversion and SHA-256 checksums.\n\nWorkers have time/output limits but are not an operating-system security sandbox. Process trusted files. Archives and the Mac notch are not included. Windows offers an opt-in Explorer/Desktop Shift drag wheel with a top-of-screen progress island, and tray mode; Linux uses the app window. Failed files do not stop the batch.')
+        QMessageBox.information(self,'Trial capabilities','Images: PNG, JPEG, WebP, TIFF, BMP output; PNG/JPEG/WebP/TIFF/BMP/AVIF input. Resize and rotate. Single-frame only; 40 megapixels. HEIC and SVG are not supported in this trial.\n\nPDF: image to PDF, merge (up to 200 pages), split and extract text. No OCR or password-protected PDFs.\n\nWord: .docx body and table text to plain text, or to a text-only PDF in Helvetica (Latin text only). Formatting, images, explicitly hidden runs, headers, footers and notes are not kept. No .doc, macro-enabled or encrypted files.\n\nMedia: MP4/WebM/MP3/WAV/FLAC/Ogg using a separately selected FFmpeg. Codecs depend on your installation. No FFmpeg download is performed.\n\nSimple SRT/VTT conversion and SHA-256 checksums.\n\nWorkers have time/output limits but are not an operating-system security sandbox. Process trusted files. Archives and the Mac notch are not included. Windows offers an opt-in Explorer/Desktop Shift drag wheel with a top-of-screen progress island, and tray mode; Linux uses the app window. Failed files do not stop the batch.')
     def start(self):
         if not self.paths or (self.batch and self.batch.isRunning()):return
         self.batch_errors=[]
@@ -178,10 +178,6 @@ def background_startup(arguments, windows=None):
     return '--window' not in arguments and '--smoke-test' not in arguments and any(flag in arguments for flag in ('--background','--headless'))
 
 def main():
-    if os.name=='nt' and getattr(sys,'frozen',False):
-        import ctypes
-        handle=ctypes.windll.kernel32.GetConsoleWindow()
-        if handle: ctypes.windll.user32.ShowWindow(handle,0)
     app=QApplication(sys.argv);app.setStyle('Fusion');app.setStyleSheet('QWidget{background:#171717;color:#f5f3ed;font-size:13px} QPushButton,QComboBox,QSpinBox{padding:8px;border:1px solid #666;border-radius:6px} QPushButton:disabled{color:#888} QListWidget{background:#222;border:2px dashed #777;border-radius:10px;padding:8px} QProgressBar{border:1px solid #666;border-radius:4px;text-align:center} QProgressBar::chunk{background:#ff610a}')
     window=Window()
     background=background_startup(sys.argv)
@@ -199,6 +195,14 @@ def main():
         print('Background wheel mode is supported on Windows with a system tray.',file=sys.stderr)
         return 2
     if not background:window.show()
-    if '--smoke-test' in sys.argv:QTimer.singleShot(400,app.quit)
+    if '--smoke-test' in sys.argv:
+        if '--smoke-input' in sys.argv:
+            # Packaged CI exercises GUI -> Batch -> frozen worker, not just the worker alone.
+            window.add_paths([sys.argv[sys.argv.index('--smoke-input')+1]])
+            window.target.setCurrentText('JPEG');window.start()
+            if window.batch:
+                window.batch.finished.connect(lambda:app.exit(0 if len(window.outputs)==1 and not window.batch_errors else 1))
+            else:QTimer.singleShot(0,lambda:app.exit(1))
+        else:QTimer.singleShot(400,app.quit)
     return app.exec()
 if __name__=='__main__':raise SystemExit(main())

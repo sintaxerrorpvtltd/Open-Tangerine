@@ -113,6 +113,20 @@ class DocxTests(unittest.TestCase):
         with self.assertRaisesRegex(DocxError, 'DTD or entity'):
             extract_docx(self.docx(xml=bomb))
 
+    def test_dtd_rejected_independently_of_xml_encoding(self):
+        for encoding in ('utf-8', 'utf-16', 'utf-16-le', 'utf-16-be'):
+            with self.subTest(encoding):
+                declaration = 'utf-16' if encoding.startswith('utf-16') else encoding
+                xml = '<?xml version="1.0" encoding="' + declaration + '"?><!DOCTYPE r [<!ENTITY x "expanded">]><r>&x;</r>'
+                with self.assertRaisesRegex(DocxError, 'DTD or entity'):
+                    docx_text.parse(xml.encode(encoding))
+                safe = '<?xml version="1.0" encoding="' + declaration + '"?><r>safe</r>'
+                self.assertEqual(docx_text.parse(safe.encode(encoding)).text, 'safe')
+
+    def test_unicode_text_limit_counts_utf8_bytes(self):
+        with patch.object(docx_text, 'MAX_TEXT', 6), self.assertRaisesRegex(DocxError, 'Extracted text'):
+            extract_docx(self.docx(para(run('中文'))))
+
     def test_rejects_wrong_or_hostile_packages(self):
         cases = {
             'macro': (dict(kind='application/vnd.ms-word.document.macroEnabled.main+xml'), 'Macro-enabled'),
