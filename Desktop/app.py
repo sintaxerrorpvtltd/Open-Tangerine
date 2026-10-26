@@ -87,18 +87,26 @@ class Window(QMainWindow):
         updates=QPushButton('Downloads / updates');updates.clicked.connect(lambda:QDesktopServices.openUrl(QUrl(WEBSITE+'?platform=desktop&version='+VERSION+'#desktop')));row.addWidget(updates)
         limits=QPushButton('Supported features');limits.clicked.connect(self.show_limits);row.addWidget(limits)
         layout.addWidget(QLabel('Sintax Error Private Limited · GPL-3.0-only · v'+VERSION))
-        self.shift_wheel=None
+        self.shift_wheel=None;self.island=None
         if os.name=='nt' and global_wheel and '--smoke-test' not in sys.argv:
             from windows_wheel import WindowsShiftWheel
+            from island import ConversionIsland, STYLES
             self.shift_wheel=WindowsShiftWheel(self)
+            self.island=ConversionIsland(self,self.settings.value('islandStyle',STYLES[0]))
             self.shift_toggle=QCheckBox('Enable experimental Shift drag wheel in Explorer / Desktop')
             self.shift_toggle.setChecked(self.settings.value('shiftWheel', False, type=bool))
             self.shift_wheel.set_enabled(self.shift_toggle.isChecked())
             self.shift_toggle.toggled.connect(self.toggle_shift_wheel)
             layout.addWidget(self.shift_toggle)
+            row=QHBoxLayout();layout.addLayout(row);row.addWidget(QLabel('Wheel progress island'))
+            self.island_style=QComboBox();self.island_style.addItems(STYLES);self.island_style.setAccessibleName('Wheel progress island style')
+            self.island_style.setCurrentText(self.island.style_name);self.island_style.currentTextChanged.connect(self.set_island_style);row.addWidget(self.island_style,1)
     def toggle_shift_wheel(self, enabled):
         self.settings.setValue('shiftWheel',enabled)
         self.shift_wheel.set_enabled(enabled)
+    def set_island_style(self, style):
+        self.settings.setValue('islandStyle',style)
+        self.island.set_style(style)
     def update_options(self):
         enabled=self.target.currentText() in ['PNG','JPEG','WEBP','TIFF','BMP','Image → PDF'];self.width.setEnabled(enabled);self.rotate.setEnabled(enabled)
     def add_paths(self,paths):
@@ -123,7 +131,7 @@ class Window(QMainWindow):
             self.settings.setValue('ffmpeg',str(Path(path).resolve()));self.status.setText('FFmpeg selected. It runs only when you request media conversion.')
     def ffmpeg_path(self):return self.settings.value('ffmpeg','')
     def show_limits(self):
-        QMessageBox.information(self,'Trial capabilities','Images: PNG, JPEG, WebP, TIFF, BMP output; PNG/JPEG/WebP/TIFF/BMP/AVIF input. Resize and rotate. Single-frame only; 40 megapixels. HEIC and SVG are not supported in this trial.\n\nPDF: image to PDF, merge (up to 200 pages), split and extract text. No OCR, Word conversion or password-protected PDFs.\n\nMedia: MP4/WebM/MP3/WAV/FLAC/Ogg using a separately selected FFmpeg. Codecs depend on your installation. No FFmpeg download is performed.\n\nSimple SRT/VTT conversion and SHA-256 checksums.\n\nWorkers have time/output limits but are not an operating-system security sandbox. Process trusted files. Archives and the Mac notch are not included. Windows offers an opt-in Explorer/Desktop Shift drag wheel and tray mode; Linux uses the app window. Failed files do not stop the batch.')
+        QMessageBox.information(self,'Trial capabilities','Images: PNG, JPEG, WebP, TIFF, BMP output; PNG/JPEG/WebP/TIFF/BMP/AVIF input. Resize and rotate. Single-frame only; 40 megapixels. HEIC and SVG are not supported in this trial.\n\nPDF: image to PDF, merge (up to 200 pages), split and extract text. No OCR, Word conversion or password-protected PDFs.\n\nMedia: MP4/WebM/MP3/WAV/FLAC/Ogg using a separately selected FFmpeg. Codecs depend on your installation. No FFmpeg download is performed.\n\nSimple SRT/VTT conversion and SHA-256 checksums.\n\nWorkers have time/output limits but are not an operating-system security sandbox. Process trusted files. Archives and the Mac notch are not included. Windows offers an opt-in Explorer/Desktop Shift drag wheel with a top-of-screen progress island, and tray mode; Linux uses the app window. Failed files do not stop the batch.')
     def start(self):
         if not self.paths or (self.batch and self.batch.isRunning()):return
         self.batch_errors=[]
@@ -159,6 +167,7 @@ class Window(QMainWindow):
             self.batch.cancel.set();event.ignore();self.status.setText('Stopping conversion before closing…');QTimer.singleShot(200,self.close)
         else:
             if self.shift_wheel:self.shift_wheel.stop()
+            if self.island:self.island.stop()
             if self.background:
                 self.background.stop()
                 QApplication.instance().quit()
