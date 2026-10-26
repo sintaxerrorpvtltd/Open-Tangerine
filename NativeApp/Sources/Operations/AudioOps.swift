@@ -247,6 +247,11 @@ enum AudioOps {
             args += ["-loop", "1", "-framerate", "30", "-i", image.path]
             filter = "[1:v]scale=\(w):\(h):force_original_aspect_ratio=decrease,pad=\(w):\(h):(ow-iw)/2:(oh-ih)/2:color=\(background),format=yuv420p[v]"
         }
+        // A looping image can outlast audio because -shortest buffers encoded frames.
+        // Bound the output explicitly when the source duration is known.
+        if let duration, duration.isFinite, duration > 0 {
+            args += ["-t", String(duration)]
+        }
         args += ["-filter_complex", filter, "-map", "[v]", "-map", "0:a", "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", destination.path]
         try await FFmpeg.run(args, purpose: "Creating visualizer", duration: duration, progress: progress)
     }

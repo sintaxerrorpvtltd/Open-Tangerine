@@ -1,12 +1,11 @@
-# Windows/Linux desktop 0.2.2 — glass wheel and safer background use
+# Windows/Linux desktop 0.2.3 — console fix, progress feedback and focused DOCX export
 
-Thanks to @VandanPatell for the glass wheel/tray contribution in #2, and @eklavyamathur9 for the earlier reliability report in #3.
+Thanks to the contributors of #16, #17 and #18 for focused changes and detailed testing.
 
-- Glass format picker in the app window on Windows and Linux.
-- Opt-in experimental Windows Explorer/Desktop Shift drag wheel. Start a file drag and hold Shift briefly; Escape cancels. Other editors and Shift typing do not trigger it. Windows PowerShell reads selections locally; lookup can take a moment.
-- Validate actual dropped files and require Copy semantics, including Move-only rejection. Originals remain unchanged.
-- Windows tray mode is optional. Start with a visible window; Run in background hides it to the tray. No tray means no hidden default app. Quit cancels and waits for active work.
-- Preserve all 0.2.1 fixes: bounded FFmpeg threads, FAT/exFAT fallback, merge row results, checksum safety, cancellation cleanup and bundled notices/source.
-- Website badge moved to the hero; clearer explanation of the separate Mac trial’s Apple verification warning.
+- Fix #17: Windows uses a GUI executable without a console and a separate OpenTangerineWorker.exe with redirected pipes and CREATE_NO_WINDOW. Keep the worker and _internal folder beside the app. Linux keeps its existing launcher.
+- Integrate #16: Windows Shift-wheel conversions get a non-activating progress island with Pure black, painted Glass or Off styles. Success/cancellation retract after two seconds; failures stay dismissible. Switching Off during a batch restores tray feedback. Reduced motion follows the Windows setting.
+- Integrate #18: DOCX body/table text to UTF-8 text or a searchable text-only PDF, with no new dependencies. The PDF route supports Western European Latin only and names unsupported characters; use DOCX → Text for other scripts. Formatting, images, text boxes, hidden runs, headers/footers and notes are not preserved. This is not formatted Word export or a sanitizer.
+- Harden DOCX parsing: parser-level DTD rejection covers UTF-8 and UTF-16; extracted-text limits count UTF-8 bytes. Originals and existing outputs remain protected by the same workers/publication rules.
+- Add regression tests and frozen GUI-to-worker conversion checks; verify the Windows archive contains distinct GUI/console PE subsystems and all rebuildable source.
 
-No new conversion dependencies. Office converters from #2 are deferred for separate review under #11. No Linux global wheel or physical notch. This is an unsigned early trial; Windows has no hard memory cap and workers are not an OS sandbox. Live Windows Explorer interactions across desktop configurations remain experimental; automated native-platform conversion, Qt drop and packaged-startup checks are required before publication. Keep the previous package for rollback. Mac binary remains 0.1.10 and is not Apple-notarized.
+Unsigned early desktop trial. The Shift wheel remains opt-in; Linux has no global wheel/island. Windows workers have no hard memory cap and are not an OS sandbox. Multi-monitor/high-DPI/Windows Terminal configurations still need real user confirmation. Mac remains 0.1.10, ad-hoc signed and unnotarized. Keep the previous release for rollback.
