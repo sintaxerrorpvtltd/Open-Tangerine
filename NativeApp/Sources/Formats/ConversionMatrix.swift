@@ -18,6 +18,8 @@ enum ConversionMatrix {
             list = [.docx, .jpg, .png, .txt]
         case .txt:
             list = [.pdf, .jpg, .png, .srt, .vtt]
+        case .html:
+            list = [.pdf, .docx, .png, .jpg, .webp]
         case .srt, .vtt:
             list = FileFormat.subtitles + [.txt]
         case .zip, .tar, .gz, .rar:

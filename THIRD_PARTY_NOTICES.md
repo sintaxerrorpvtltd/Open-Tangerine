@@ -10,7 +10,7 @@ The native app is substantially based on Satsuma's Swift implementation. Open Ta
 
 ## Apple frameworks
 
-AppKit, SwiftUI, ImageIO, PDFKit, AVFoundation, CoreImage, CryptoKit and related system frameworks are provided by macOS. They are not redistributed separately.
+AppKit, SwiftUI, ImageIO, PDFKit, AVFoundation, CoreImage, CryptoKit, WebKit and related system frameworks are provided by macOS. They are not redistributed separately.
 
 ## Optional external programs
 

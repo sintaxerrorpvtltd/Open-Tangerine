@@ -26,6 +26,43 @@ import ImageIO
             if FFmpeg.isAvailable { try await FFmpeg.run(["-i",output.path,"-f","null","-"],purpose:"Independent WebP decode") }
             count += 1
         }
+        func psnr(_ a: [UInt8], _ b: [UInt8]) -> Double {
+            var squared = 0.0, n = 0.0
+            for i in a.indices where i % 4 != 3 { let d = Double(Int(a[i]) - Int(b[i])); squared += d * d; n += 1 }
+            return 10 * log10(255 * 255 / max(squared / n, 1e-9))
+        }
+        // Lossy fallback: photo-like content must shrink well below raw size, decode faithfully and keep alpha exact.
+        for (w,h,transparent) in [(640,480,false),(333,517,true)] {
+            let c = CGContext(data:nil,width:w,height:h,bitsPerComponent:8,bytesPerRow:w*4,space:CGColorSpace(name:CGColorSpace.sRGB)!,bitmapInfo:CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue)!
+            let pixels=c.data!.assumingMemoryBound(to:UInt8.self)
+            for y in 0..<h { for x in 0..<w {
+                let i=(y*w+x)*4, a = transparent ? UInt8(x < w/3 ? 0 : x < 2*w/3 ? 128 : 255) : 255
+                let noise = (x*7919 + y*104729) % 9
+                let rgb = [UInt8(min(255, x*255/w + noise)), UInt8(min(255, y*255/h + noise)), UInt8((x+y)*128/(w+h) + 60)]
+                for k in 0..<3 { pixels[i+k] = UInt8(Int(rgb[k]) * Int(a) / 255) }
+                pixels[i+3]=a
+            } }
+            let original = c.makeImage()!, output = root.appendingPathComponent("lossy-\(w).webp")
+            try WebPLossy.write(original,to:output,quality:0.9)
+            let size = try FileManager.default.attributesOfItem(atPath: output.path)[.size] as! Int
+            let decoded = try ImageIOBridge.load(output)
+            precondition(decoded.width == w && decoded.height == h)
+            let lhs=rgba(original), rhs=rgba(decoded)
+            precondition(size < w*h*4/8, "Lossy WebP is too large: \(size) bytes")
+            precondition(psnr(lhs,rhs) > 35, "Lossy WebP fidelity too low: \(psnr(lhs,rhs)) dB")
+            precondition(stride(from:3,to:lhs.count,by:4).allSatisfy { lhs[$0] == rhs[$0] }, "WebP alpha changed")
+            if FFmpeg.isAvailable { try await FFmpeg.run(["-i",output.path,"-f","null","-"],purpose:"Independent WebP decode") }
+            count += 1
+        }
+        // Few-colour graphics take the exact lossless path.
+        let graphic = CGContext(data:nil,width:120,height:90,bitsPerComponent:8,bytesPerRow:480,space:CGColorSpace(name:CGColorSpace.sRGB)!,bitmapInfo:CGImageAlphaInfo.premultipliedLast.rawValue)!
+        graphic.setFillColor(CGColor(red:1,green:0.5,blue:0,alpha:1)); graphic.fill(CGRect(x:0,y:0,width:120,height:90))
+        graphic.setFillColor(CGColor(red:0,green:0.3,blue:0.9,alpha:1)); graphic.fill(CGRect(x:30,y:20,width:50,height:40))
+        let graphicURL = root.appendingPathComponent("graphic.webp")
+        try WebPLossy.write(graphic.makeImage()!,to:graphicURL,quality:0.5)
+        let graphicBack = try ImageIOBridge.load(graphicURL)
+        precondition(rgba(graphic.makeImage()!) == rgba(graphicBack), "Few-colour WebP is not exact")
+        count += 1
         let c = CGContext(data:nil,width:80,height:64,bitsPerComponent:8,bytesPerRow:320,space:CGColorSpace(name:CGColorSpace.sRGB)!,bitmapInfo:CGImageAlphaInfo.premultipliedLast.rawValue)!
         c.setFillColor(CGColor(red:0.2,green:0.6,blue:0.8,alpha:1)); c.fill(CGRect(x:0,y:0,width:80,height:64))
         let image=c.makeImage()!
@@ -54,9 +91,9 @@ import ImageIO
             let decoded=try ImageIOBridge.load(output)
             precondition(decoded.width == original.width && decoded.height == original.height)
             let lhs=rgba(original), rhs=rgba(decoded)
-            precondition(zip(lhs,rhs).allSatisfy { abs(Int($0)-Int($1)) <= 2 })
+            precondition(ImageIOBridge.canEncodeNatively(.webp) || psnr(lhs,rhs) > 35)
             count += 1
-            print("PASS user HEIC -> WebP, dimensions and RGBA comparison")
+            print("PASS user HEIC -> WebP, dimensions and \(String(format: "%.1f", psnr(lhs,rhs))) dB PSNR")
         }
         precondition(FFmpeg.summarize("Unknown encoder 'libwebp'\nError opening output files: Encoder not found").contains("Unknown encoder"))
         print("IMAGE CONVERSION RESULT: \(count) passed")

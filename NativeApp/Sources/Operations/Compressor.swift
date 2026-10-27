@@ -28,7 +28,7 @@ enum Compressor {
                 if let image = try? ImageIOBridge.load(url), image.alphaInfo != .none && image.alphaInfo != .noneSkipLast && image.alphaInfo != .noneSkipFirst { return .png }
                 return .jpg
             case .bmp, .tiff, .svg: return .jpg
-            case .avif, .webp: return ImageIOBridge.canEncodeNatively(format) || FFmpeg.isAvailable ? format : .jpg
+            case .avif: return ImageIOBridge.canEncodeNatively(format) || FFmpeg.isAvailable ? format : .jpg
             default: return format
             }
         case .video:

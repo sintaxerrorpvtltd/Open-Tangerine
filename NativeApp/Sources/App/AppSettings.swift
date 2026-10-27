@@ -85,6 +85,46 @@ enum NotchSurface: String, CaseIterable, Identifiable {
     var title: String { self == .black ? "Pure black" : "Glass" }
 }
 
+enum HTMLPageSize: String, CaseIterable, Identifiable {
+    case a4
+    case letter
+
+    var id: String { rawValue }
+
+    var title: String { self == .a4 ? "A4" : "Letter" }
+
+    var points: CGSize { self == .a4 ? CGSize(width: 595.28, height: 841.89) : CGSize(width: 612, height: 792) }
+
+    static var regional: HTMLPageSize { Locale.current.measurementSystem == .us ? .letter : .a4 }
+}
+
+enum HTMLMargins: String, CaseIterable, Identifiable {
+    case none
+    case narrow
+    case normal
+
+    var id: String { rawValue }
+
+    var title: String { rawValue.capitalized }
+
+    var points: CGFloat {
+        switch self {
+        case .none: return 0
+        case .narrow: return 18
+        case .normal: return 36
+        }
+    }
+}
+
+enum HTMLCapture: String, CaseIterable, Identifiable {
+    case fullPage
+    case viewport
+
+    var id: String { rawValue }
+
+    var title: String { self == .fullPage ? "Full page" : "Visible area" }
+}
+
 final class AppSettings: ObservableObject {
     static let shared = AppSettings()
 
@@ -133,6 +173,46 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(jpegQuality, forKey: "jpegQuality") }
     }
 
+    @Published var htmlPageSize: HTMLPageSize {
+        didSet { defaults.set(htmlPageSize.rawValue, forKey: "htmlPageSize") }
+    }
+
+    @Published var htmlLandscape: Bool {
+        didSet { defaults.set(htmlLandscape, forKey: "htmlLandscape") }
+    }
+
+    @Published var htmlMargins: HTMLMargins {
+        didSet { defaults.set(htmlMargins.rawValue, forKey: "htmlMargins") }
+    }
+
+    @Published var htmlPrintBackgrounds: Bool {
+        didSet { defaults.set(htmlPrintBackgrounds, forKey: "htmlPrintBackgrounds") }
+    }
+
+    @Published var htmlViewportWidth: Int {
+        didSet { defaults.set(htmlViewportWidth, forKey: "htmlViewportWidth") }
+    }
+
+    @Published var htmlScale: Int {
+        didSet { defaults.set(htmlScale, forKey: "htmlScale") }
+    }
+
+    @Published var htmlCapture: HTMLCapture {
+        didSet { defaults.set(htmlCapture.rawValue, forKey: "htmlCapture") }
+    }
+
+    @Published var htmlAllowsJavaScript: Bool {
+        didSet { defaults.set(htmlAllowsJavaScript, forKey: "htmlAllowsJavaScript") }
+    }
+
+    @Published var htmlAllowsRemoteContent: Bool {
+        didSet { defaults.set(htmlAllowsRemoteContent, forKey: "htmlAllowsRemoteContent") }
+    }
+
+    @Published var htmlTimeout: Int {
+        didSet { defaults.set(htmlTimeout, forKey: "htmlTimeout") }
+    }
+
     @Published var appearanceMode: AppearanceMode {
         didSet {
             defaults.set(appearanceMode.rawValue, forKey: "appearanceMode")
@@ -156,6 +236,18 @@ final class AppSettings: ObservableObject {
         }
         ffmpegPath = defaults.string(forKey: "ffmpegPath") ?? ""
         jpegQuality = defaults.object(forKey: "jpegQuality") as? Double ?? 0.9
+        htmlPageSize = HTMLPageSize(rawValue: defaults.string(forKey: "htmlPageSize") ?? "") ?? .regional
+        htmlLandscape = defaults.bool(forKey: "htmlLandscape")
+        htmlMargins = HTMLMargins(rawValue: defaults.string(forKey: "htmlMargins") ?? "") ?? .normal
+        htmlPrintBackgrounds = defaults.object(forKey: "htmlPrintBackgrounds") as? Bool ?? true
+        htmlViewportWidth = defaults.object(forKey: "htmlViewportWidth") as? Int ?? 1280
+        htmlScale = defaults.object(forKey: "htmlScale") as? Int ?? 1
+        htmlCapture = HTMLCapture(rawValue: defaults.string(forKey: "htmlCapture") ?? "") ?? .fullPage
+        // Dropped HTML is untrusted, so scripts stay off unless the user opts in. Remote images, styles and fonts are
+        // also opt-in so conversion never contacts a server by default; private-network addresses stay blocked either way.
+        htmlAllowsJavaScript = defaults.bool(forKey: "htmlAllowsJavaScript")
+        htmlAllowsRemoteContent = defaults.bool(forKey: "htmlAllowsRemoteContent")
+        htmlTimeout = defaults.object(forKey: "htmlTimeout") as? Int ?? 30
         appearanceMode = AppearanceMode(rawValue: defaults.string(forKey: "appearanceMode") ?? "") ?? .system
         if #available(macOS 13.0, *) {
             launchAtLogin = SMAppService.mainApp.status == .enabled

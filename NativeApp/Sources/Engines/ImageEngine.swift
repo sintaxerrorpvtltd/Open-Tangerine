@@ -134,7 +134,8 @@ enum ImageIOBridge {
             return
         }
         if format == .webp, !(await FFmpeg.availableEncoders()).contains("libwebp") {
-            try WebPLossless.write(image, to: url)
+            DiagnosticLog.log("no libwebp in ffmpeg, using built-in WebP encoder")
+            try WebPLossy.write(image, to: url, quality: quality)
             return
         }
         DiagnosticLog.log("no native encoder for \(format.rawValue), using ffmpeg")
