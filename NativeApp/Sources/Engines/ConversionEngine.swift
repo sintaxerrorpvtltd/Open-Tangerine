@@ -19,6 +19,7 @@ enum Engines {
         AudioEngine(),
         VideoEngine(),
         DocumentEngine(),
+        HTMLEngine(),
         SubtitleEngine(),
         ArchiveEngine(),
     ]

@@ -27,6 +27,7 @@ The 0.1.7 follow-up adds a pure-black notch backing and top-anchored expand/retr
 | Interaction | HTTP update detection, version comparison and website handoff; companion state transitions |
 | Image conversion | 30 routes among PNG/JPEG/TIFF/BMP/WebP/AVIF; three asymmetric lossless WebP RGBA checks; user's HEIC-to-WebP check (34 local checks) |
 | Documents | TXT/PDF/image/DOCX/subtitle outputs; all PDF split modes, merge/reorder/rotate, compression page integrity, mixed scanned/text ordering, locked/scanned rejection |
+| HTML | PDF page sizes, landscape, print CSS and inline/linked `@page` rules; 15-page pagination; PNG/JPEG/WebP full page, 2× scale and visible area with external CSS and relative images; oversized page rejection; DOCX headings, runs, links, nested lists, tables, quotes, code and images; undeclared UTF-8 (Devanagari, emoji) and declared ISO-8859-1; JavaScript off/on, blocked navigation, folder and private-address isolation; empty, malformed, missing-asset and timeout cases; temp cleanup |
 | Batch | Four-file conversion, overlapping output reservation, mixed targets, individual corrupt/unknown failures |
 | Image tools | 30 local assertions: rotation/flip pixel round trips, resize/crop, frame, four collage layouts, metadata deletion, checksum and duplication |
 | Media | 55 checks: all audio/video target families, reverse input routes, trim/split/crop/speed/join/snapshot/redaction, channels and actual signal content, bleep frequency, loudness, compression and three visualizers |
@@ -39,8 +40,9 @@ GitHub macOS 26 release CI for 0.1.6 completed successfully: native PNG-to-HEIC 
 
 - Local restricted execution cannot use native HEIC encoding or CoreImage rendering. PNG-to-HEIC has been confirmed by the user in the normal app; local HEIC decoding-to-WebP passed. Adjustment/redaction pixel tests passed on the GitHub macOS runner; local blocked checks were not counted as success.
 - Finder pasteboard service was unavailable locally; its four-file test passed in GitHub CI. The four-file engine path passes; this does not claim live Finder drag verification. Clipboard/reveal actions and AV metadata export were not exercised.
-- Word support is DOCX output, not general Word input. PDF-to-DOCX reconstructs text or page images, without OCR or exact layout preservation.
-- Compression cannot guarantee smaller output. The WebP fallback is lossless, ignores lossy quality, and produces larger files. Its output must stay under 100 MB; dimensions are limited to 16,384 per side. All images retain the 40 MP input limit.
+- Word support is DOCX output, not general Word input. PDF-to-DOCX reconstructs text or page images, without OCR or exact layout preservation. HTML-to-DOCX keeps structure, not CSS layout.
+- HTML rendering is WebKit's. Output can differ from Chromium-based browsers, and pages that keep loading content after the load event are captured as they are at that point.
+- Compression cannot guarantee smaller output. The built-in WebP fallback is a simple lossy VP8 encoder (lossless for images with 256 colours or fewer); it is larger than libwebp output at the same quality. Its output must stay under 100 MB; dimensions are limited to 16,384 per side. All images retain the 40 MP input limit.
 - Archive conversion is disabled and no longer offered. SVG, malformed-file fuzzing, huge-batch performance, Intel hardware, accessibility and every possible codec/profile combination are not exhaustively verified.
 - The app remains ad-hoc signed, not Apple-notarized. Updates use the website for manual download/replacement. No Apple Developer subscription is needed for the update check.
 

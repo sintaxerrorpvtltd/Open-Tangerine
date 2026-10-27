@@ -254,6 +254,52 @@ struct SettingsView: View {
             }
         }
         Section {
+            Picker("PDF page size", selection: $settings.htmlPageSize) {
+                ForEach(HTMLPageSize.allCases) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            Toggle("Landscape", isOn: $settings.htmlLandscape)
+            Picker("Margins", selection: $settings.htmlMargins) {
+                ForEach(HTMLMargins.allCases) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            Toggle("Print background colors and images", isOn: $settings.htmlPrintBackgrounds)
+            Picker("Page images", selection: $settings.htmlCapture) {
+                ForEach(HTMLCapture.allCases) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            HStack {
+                Text("Viewport width")
+                TextField("1280", value: $settings.htmlViewportWidth, format: .number)
+                    .labelsHidden()
+                    .accessibilityLabel("Viewport width in pixels")
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 80)
+                Text("px").foregroundStyle(.secondary)
+            }
+            Picker("Image scale", selection: $settings.htmlScale) {
+                Text("1×").tag(1)
+                Text("2×").tag(2)
+                Text("3×").tag(3)
+            }
+            .pickerStyle(.segmented)
+            Toggle("Run JavaScript", isOn: $settings.htmlAllowsJavaScript)
+            Toggle("Load remote images, styles and fonts", isOn: $settings.htmlAllowsRemoteContent)
+            HStack {
+                Text("Give up after")
+                TextField("30", value: $settings.htmlTimeout, format: .number)
+                    .labelsHidden()
+                    .accessibilityLabel("Give up after, in seconds")
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 60)
+                Text("seconds").foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("HTML")
+        } footer: {
+            Text("PDF follows the page's own @page size and margins when it sets them. Page images use the quality above. Word documents keep headings, text styles, links, lists, tables and local images, not the page layout. Scripts stay off unless you turn them on, because HTML files can run code. Remote content is off by default, so conversion never contacts a server and remote images appear as empty boxes; turn it on to load them as Safari would.")
+        }
+        Section {
             Picker("Preset", selection: $settings.compressionPreset) {
                 ForEach(CompressionPreset.allCases) { Text($0.title).tag($0) }
             }

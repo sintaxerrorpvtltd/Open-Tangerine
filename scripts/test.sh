@@ -6,7 +6,7 @@ mkdir -p .build/module-cache .build/test-sources
 # Compile the app once; run each suite in a fresh process so state cannot leak.
 python3 - <<'PY'
 from pathlib import Path
-suites = ['SatsumaTests', 'IntegrationTests', 'InteractionTests', 'ImageConversionTests', 'DocumentTests', 'BatchTests', 'ImageToolsTests', 'MediaIntegrationTests']
+suites = ['SatsumaTests', 'IntegrationTests', 'InteractionTests', 'ImageConversionTests', 'DocumentTests', 'HTMLTests', 'BatchTests', 'ImageToolsTests', 'MediaIntegrationTests']
 for name in suites:
     source = Path('NativeApp/Tests', name + '.swift').read_text().replace('@main ', '').replace('@main\n', '')
     Path('.build/test-sources', name + '.swift').write_text(source)
@@ -18,7 +18,7 @@ driver += 'default: fatalError("Choose a test suite")\n}\n}\n}\n'
 Path('.build/test-sources/AllTests.swift').write_text(driver)
 PY
 find NativeApp/Sources .build/test-sources -name '*.swift' ! -path '*/Sources/App.swift' -print0 | xargs -0 xcrun swiftc -swift-version 5 -parse-as-library -target "$(uname -m)-apple-macosx$MIN_MACOS" -module-cache-path "$PWD/.build/module-cache" -o .build/all-tests
-for suite in SatsumaTests IntegrationTests InteractionTests ImageConversionTests DocumentTests BatchTests ImageToolsTests MediaIntegrationTests; do
+for suite in SatsumaTests IntegrationTests InteractionTests ImageConversionTests DocumentTests HTMLTests BatchTests ImageToolsTests MediaIntegrationTests; do
   echo "Running $suite"
   .build/all-tests "$suite"
 done

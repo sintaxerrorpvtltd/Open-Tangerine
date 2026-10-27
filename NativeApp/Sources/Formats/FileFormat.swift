@@ -36,7 +36,7 @@ enum FileFormat: String, CaseIterable, Identifiable, Hashable {
     case jpg, png, webp, heic, tiff, svg, avif, bmp, gif
     case mp3, m4a, wav, flac, ogg, opus, aiff, wma
     case mp4, mov, mkv, webm, avi, wmv
-    case pdf, docx, txt
+    case pdf, docx, txt, html
     case srt, vtt
     case zip, tar, gz, rar
 
@@ -55,7 +55,7 @@ enum FileFormat: String, CaseIterable, Identifiable, Hashable {
         case .gif: return .video
         case .mp3, .m4a, .wav, .flac, .ogg, .opus, .aiff, .wma: return .audio
         case .mp4, .mov, .mkv, .webm, .avi, .wmv: return .video
-        case .pdf, .docx, .txt: return .document
+        case .pdf, .docx, .txt, .html: return .document
         case .srt, .vtt: return .subtitle
         case .zip, .tar, .gz, .rar: return .archive
         }
@@ -85,6 +85,7 @@ enum FileFormat: String, CaseIterable, Identifiable, Hashable {
         case .mov: return ["mov", "qt"]
         case .gz: return ["gz", "tgz"]
         case .txt: return ["txt", "text", "md", "log"]
+        case .html: return ["html", "htm"]
         case .aiff: return ["aiff", "aif"]
         default: return [rawValue]
         }
@@ -118,6 +119,7 @@ enum FileFormat: String, CaseIterable, Identifiable, Hashable {
         case .pdf: return .pdf
         case .docx: return UTType("org.openxmlformats.wordprocessingml.document")
         case .txt: return .plainText
+        case .html: return .html
         case .srt: return UTType("com.subrip.srt") ?? .plainText
         case .vtt: return UTType("org.w3.webvtt") ?? .plainText
         case .zip: return .zip

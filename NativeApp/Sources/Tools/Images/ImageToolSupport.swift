@@ -7,7 +7,7 @@ enum ImageToolSupport {
         let format = FileFormat.detect(source) ?? .png
         switch format {
         case .svg, .bmp: return .png
-        case .avif, .webp: return ImageIOBridge.canEncodeNatively(format) ? format : .png
+        case .avif: return ImageIOBridge.canEncodeNatively(format) ? format : .png
         default: return format
         }
     }
