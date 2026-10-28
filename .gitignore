@@ -6,3 +6,7 @@ dist/
 .env.*
 *.p12
 *.mobileprovision
+__pycache__/
+Desktop/.venv/
+Desktop/build/
+Desktop/*.spec
