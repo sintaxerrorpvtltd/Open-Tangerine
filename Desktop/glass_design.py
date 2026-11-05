@@ -6,7 +6,8 @@ from PySide6.QtGui import QColor, QPainterPath, QPen, QLinearGradient, QRadialGr
 
 def format_label(value):
     return {'Image → PDF': 'PDF', 'PDF → Text': 'TXT', 'Split PDF': 'SPLIT',
-            'Merge PDFs': 'MERGE', 'SRT → VTT': 'VTT', 'VTT → SRT': 'SRT'}.get(value, value)
+            'Merge PDFs': 'MERGE', 'SRT → VTT': 'VTT', 'VTT → SRT': 'SRT',
+            'DOCX → Text': 'TXT', 'DOCX → PDF (text only)': 'PDF'}.get(value, value)
 
 
 def target_at(point, formats):

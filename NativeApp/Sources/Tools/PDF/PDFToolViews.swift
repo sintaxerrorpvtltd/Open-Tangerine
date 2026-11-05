@@ -16,12 +16,12 @@ struct MergePDFToolView: View {
     }
 
     var body: some View {
-        ToolShell(session: session, saveTitle: "Merge", saveEnabled: files.count >= 1, onSave: save) {
+        ToolShell(session: session, saveTitle: "Merge", saveEnabled: files.count >= 2, onSave: save) {
             OrderedFileList(files: $files, thumbnails: thumbs, allowedTypes: [.pdf], addTitle: "Add PDFs…")
         } sidebar: {
             SidebarSection(title: "Summary") {
                 Text("\(files.count) document\(files.count == 1 ? "" : "s") · \(files.reduce(0) { $0 + (pageCounts[$1] ?? 0) }) pages").font(.callout.monospacedDigit())
-                Text("Documents are merged in list order, starting with the Finder selection order. Password-protected PDFs are skipped with an error.").font(.caption2).foregroundStyle(.secondary)
+                Text("Documents are merged in list order, starting with the Finder selection order. Add another PDF to combine. A locked PDF stops the merge.").font(.caption2).foregroundStyle(.secondary)
             }
         }
         .task(id: files) {

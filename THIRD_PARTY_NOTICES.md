@@ -52,3 +52,7 @@ SOFTWARE.
 ## Windows/Linux desktop edition
 
 The independently authored Python/Qt desktop edition uses Pillow (HPND), pypdf (BSD-3-Clause), PySide6/Shiboken and Qt (LGPLv3/GPLv3 options), Python (PSF) and PyInstaller (GPL with bootloader distribution exception). Exact pins are in `Desktop/requirements.txt`; portable builds include dependency versions and license texts under `licenses/`, and the corresponding application source under `source/`. Qt remains dynamically linked. Optional FFmpeg is installed and selected by the user and is not redistributed. Its build-specific licenses apply.
+
+## Mac PDF editor
+
+Mozilla PDF.js 6.5.438, Apache License 2.0, from the [official legacy release](https://github.com/mozilla/pdf.js/releases/tag/v6.5.438). The original distribution and included license are in Vendor/PDFJS/pdfjs.zip; the packaged app retains the upstream LICENSE and asset notices. The build changes viewer.html to restrict connections to its own origin and adds local-options.js to disable PDF scripting and enable permission checks. PDFs are served read-only from a per-window loopback address; the app never uploads or writes back the source. Upstream source: https://github.com/mozilla/pdf.js/tree/v6.5.438.

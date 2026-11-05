@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-# 0.1.10: reliable drag hover, per-app exclusions and two-second notch dismissal.
+# 0.1.11: offline PDF editing and PDF actions on the Shift wheel.
 cd "$(dirname "$0")/.."
 app="$PWD/dist/Open Tangerine.app"
 module_cache="$PWD/.build/module-cache"
@@ -43,8 +43,8 @@ cat > "$app/Contents/Info.plist" <<PLIST
 <key>CFBundleName</key><string>Open Tangerine</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.1.10</string>
-<key>CFBundleVersion</key><string>11</string>
+<key>CFBundleShortVersionString</key><string>0.1.11</string>
+<key>CFBundleVersion</key><string>12</string>
 <key>LSMinimumSystemVersion</key><string>15.0</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>
@@ -54,6 +54,7 @@ mkdir -p "$app/Contents/Resources"
 xcrun swiftc -module-cache-path "$module_cache" NativeApp/Sources/UI/BrandArtwork.swift scripts/make-icon.swift -o .build/make-icon
 .build/make-icon "$PWD/.build/AppIcon.iconset"
 python3 scripts/package-icon.py .build/AppIcon.iconset "$app/Contents/Resources/AppIcon.icns"
+python3 scripts/package-pdf-editor.py "$app/Contents/Resources/PDFEditor"
 cp LICENSE "$app/Contents/Resources/GPL-3.0.txt"
 cp NativeApp/LICENSE "$app/Contents/Resources/Satsuma-MIT.txt"
 cp THIRD_PARTY_NOTICES.md "$app/Contents/Resources/THIRD_PARTY_NOTICES.md"

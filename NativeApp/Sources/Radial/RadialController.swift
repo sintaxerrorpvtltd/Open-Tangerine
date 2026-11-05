@@ -169,7 +169,8 @@ final class RadialController: DragMonitorDelegate {
             view.items = ToolID.available(for: formats).map(RadialItem.init(tool:))
             view.emptyMessage = "No tools for this selection"
         } else {
-            view.items = ConversionMatrix.targets(for: formats).map(RadialItem.init(format:))
+            let pdfTools: [ToolID] = formats.allSatisfy { $0 == .pdf } ? [.annotatePDF, .mergePDF, .organizePDF, .splitPDF] : []
+            view.items = pdfTools.filter { $0.applies(to: formats) }.map(RadialItem.init(tool:)) + ConversionMatrix.targets(for: formats).map(RadialItem.init(format:))
             view.emptyMessage = count > 1 ? "No shared conversion for these files" : "No conversions available"
         }
     }

@@ -31,7 +31,9 @@ class WheelTests(unittest.TestCase):
         self.assertEqual(available_formats(['a.srt']), ['SRT → VTT'])
         self.assertEqual(available_formats(['a.vtt']), ['VTT → SRT'])
         self.assertEqual(available_formats(['a.svg']), [])
-        self.assertEqual(available_formats(['file.docx']), [])
+        self.assertEqual(available_formats(['file.docx']), ['DOCX → Text', 'DOCX → PDF (text only)'])
+        self.assertEqual(available_formats(['file.docx', 'b.pdf']), [])
+        self.assertEqual(available_formats(['file.doc']), [])
         self.assertEqual(available_formats(['a.png'] * 101), [])
 
     def test_ring_targets_and_hollow_center(self):

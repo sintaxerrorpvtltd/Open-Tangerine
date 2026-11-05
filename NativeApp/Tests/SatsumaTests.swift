@@ -45,7 +45,7 @@ struct OpenTangerineTests {
         }
 
         runner.test("25 advanced tools") {
-            try expectEqual(ToolID.total, 25)
+            try expectEqual(ToolID.total, 26)
         }
 
         runner.test("no format converts to itself") {
@@ -184,8 +184,10 @@ struct OpenTangerineTests {
             try expect(!ToolID.trimVideo.applies(to: [.gif]), "gif is not trimmable")
             try expect(ToolID.compress.applies(to: [.gif]), "gif compress")
             try expect(!ToolID.mergePDF.applies(to: [.docx, .docx]), "docx merge")
+            try expect(ToolID.mergePDF.applies(to: [.pdf]), "start merge from one PDF")
+            try expect(!ToolID.annotatePDF.applies(to: [.pdf, .pdf]), "edit one document at a time")
             try expectEqual(ToolID.available(for: [.mp3]).count, 7)
-            try expectEqual(ToolID.available(for: [.pdf]).count, 4)
+            try expectEqual(ToolID.available(for: [.pdf]).count, 6)
         }
 
         runner.test("compression presets") {

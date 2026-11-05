@@ -144,6 +144,7 @@ struct ToolRootView: View {
             case .trimAudio: TrimAudioToolView(session: session)
             case .audioChannels: AudioChannelsToolView(session: session)
             case .redactAudio: RedactAudioToolView(session: session)
+            case .annotatePDF: PDFEditorToolView(session: session)
             case .mergePDF: MergePDFToolView(session: session)
             case .organizePDF: OrganizePDFToolView(session: session)
             case .splitPDF: SplitPDFToolView(session: session)

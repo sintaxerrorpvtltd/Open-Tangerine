@@ -29,6 +29,7 @@ enum ToolID: String, CaseIterable, Identifiable {
     case trimAudio
     case audioChannels
     case redactAudio
+    case annotatePDF
     case mergePDF
     case organizePDF
     case splitPDF
@@ -59,6 +60,7 @@ enum ToolID: String, CaseIterable, Identifiable {
         case .trimAudio: return "Trim audio"
         case .audioChannels: return "Audio channels"
         case .redactAudio: return "Bleep audio"
+        case .annotatePDF: return "Edit PDF"
         case .mergePDF: return "Merge PDFs"
         case .organizePDF: return "Organize PDF pages"
         case .splitPDF: return "Split PDF"
@@ -86,6 +88,7 @@ enum ToolID: String, CaseIterable, Identifiable {
         case .audioToVideo: return "Creating visualizer"
         case .audioChannels: return "Converting channels"
         case .redactAudio: return "Bleeping"
+        case .annotatePDF: return "Editing PDF"
         case .mergePDF: return "Merging"
         case .organizePDF: return "Organizing"
         }
@@ -112,6 +115,7 @@ enum ToolID: String, CaseIterable, Identifiable {
         case .audioToVideo: return "VISUALIZE"
         case .audioChannels: return "CHANNELS"
         case .redactAudio: return "BLEEP"
+        case .annotatePDF: return "EDIT PDF"
         case .mergePDF: return "MERGE"
         case .organizePDF: return "ORGANIZE"
         }
@@ -140,6 +144,7 @@ enum ToolID: String, CaseIterable, Identifiable {
         case .audioToVideo: return "waveform.and.magnifyingglass"
         case .audioChannels: return "headphones"
         case .redactAudio: return "speaker.slash"
+        case .annotatePDF: return "pencil.and.outline"
         case .mergePDF: return "doc.on.doc.fill"
         case .organizePDF: return "rectangle.stack"
         }
@@ -155,15 +160,15 @@ enum ToolID: String, CaseIterable, Identifiable {
             return [.video]
         case .normalizeAudio, .audioToVideo, .trimAudio, .audioChannels, .redactAudio:
             return [.audio]
-        case .mergePDF, .organizePDF, .splitPDF:
+        case .annotatePDF, .mergePDF, .organizePDF, .splitPDF:
             return [.document]
         }
     }
 
     var arity: ToolArity {
         switch self {
-        case .compress, .editMetadata, .resizeImage, .rotateImage, .createPDF: return .any
-        case .createCollage, .joinVideos, .mergePDF: return .multiple
+        case .compress, .editMetadata, .resizeImage, .rotateImage, .createPDF, .mergePDF: return .any
+        case .createCollage, .joinVideos: return .multiple
         default: return .single
         }
     }
@@ -174,7 +179,7 @@ enum ToolID: String, CaseIterable, Identifiable {
         guard categories.count == 1, let category = categories.first, self.categories.contains(category) else { return false }
         if category == .document {
             switch self {
-            case .mergePDF, .organizePDF, .splitPDF, .editMetadata, .compress:
+            case .annotatePDF, .mergePDF, .organizePDF, .splitPDF, .editMetadata, .compress:
                 guard formats.allSatisfy({ $0 == .pdf }) else { return false }
             default:
                 return false

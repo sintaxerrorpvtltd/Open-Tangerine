@@ -7,21 +7,21 @@
 A local file converter and toolbox for **macOS**, with an early **Windows/Linux desktop edition**, by **Sintax Error Private Limited**.
 Local processing, no account, no subscription. GPL-3.0-only. Safety limits apply.
 
-**Mac status: 0.1.10 developer trial — ad-hoc signed, not Apple-notarized.** This is an independent project, not affiliated with Tangerine. It builds on [Satsuma](https://github.com/plyght/satsuma), with its MIT attribution preserved. It is not yet a complete replacement for Tangerine. See [limitations](#limitations).
+**Mac status: 0.1.11 developer trial — ad-hoc signed, not Apple-notarized.** This is an independent project, not affiliated with Tangerine. It builds on [Satsuma](https://github.com/plyght/satsuma), with its MIT attribution preserved. It is not yet a complete replacement for Tangerine. See [limitations](#limitations).
 
 ## Windows and Linux desktop edition
 
-The new **0.2.2 early desktop trial** is a separate implementation with a smaller feature set. [Download status and installation](https://sintaxerrorpvtltd.github.io/Open-Tangerine/#desktop) · [Desktop source and guide](Desktop/README.md) · [Windows/Linux build checks](https://github.com/sintaxerrorpvtltd/Open-Tangerine/actions/workflows/desktop.yml).
+The new **0.2.3 early desktop trial** is a separate implementation with a smaller feature set. [Download status and installation](https://sintaxerrorpvtltd.github.io/Open-Tangerine/#desktop) · [Desktop source and guide](Desktop/README.md) · [Windows/Linux build checks](https://github.com/sintaxerrorpvtltd/Open-Tangerine/actions/workflows/desktop.yml).
 
 | Platform | Interface | Availability / requirements |
 |---|---|---|
-| macOS | Native menu bar, global drag wheel and notch | v0.1.10; macOS 15+, universal Intel/Apple silicon build |
-| Windows | Batch window, glass format picker, opt-in Explorer Shift wheel and tray | 0.2.2 early trial; Windows 10/11 x64; unsigned portable ZIP |
-| Linux | Batch file-drop window and progress panel | 0.2.2 early trial; x64 Ubuntu 24.04 / glibc 2.39+; portable tar.gz |
+| macOS | Native menu bar, global drag wheel and notch | v0.1.11; macOS 15+, universal Intel/Apple silicon build |
+| Windows | Batch window, glass format picker, opt-in Explorer Shift wheel with a top-of-screen progress island, and tray | 0.2.3 early trial; Windows 10/11 x64; unsigned portable ZIP |
+| Linux | Batch file-drop window and progress panel | 0.2.3 early trial; x64 Ubuntu 24.04 / glibc 2.39+; portable tar.gz |
 
 Desktop packages are published only after both CI jobs pass conversion tests and packaged startup/conversion checks. If the download page does not show a package yet, verification is still pending or the release could not be checked.
 
-Windows/Linux include image conversion, resize/rotate, image-to-PDF, PDF merge/split/text extraction, simple SRT/VTT, SHA-256 and optional FFmpeg media conversion. Windows adds an **opt-in experimental Explorer/Desktop Shift drag wheel and tray**; Linux uses the app window. **No physical notch, HEIC/SVG, Office conversion, OCR or full Mac editor parity in this edition.** Drop files into its window. Each failed file is reported independently. Originals and existing outputs are preserved. Workers have limits but are not an OS security sandbox; use trusted files. [Detailed limits](Desktop/README.md#limits-and-safety).
+Windows/Linux include image conversion, resize/rotate, image-to-PDF, PDF merge/split/text extraction, Word .docx to plain text or a text-only PDF, simple SRT/VTT, SHA-256 and optional FFmpeg media conversion. Windows adds an **opt-in experimental Explorer/Desktop Shift drag wheel and tray**, with a notch-style progress island for wheel conversions; Linux uses the app window. **No physical notch, HEIC/SVG, formatted Office conversion, OCR or full Mac editor parity in this edition.** Drop files into its window. Each failed file is reported independently. Originals and existing outputs are preserved. Workers have limits but are not an OS security sandbox; use trusted files. [Detailed limits](Desktop/README.md#limits-and-safety).
 
 The illustrations below demonstrate the **Mac app**. The remaining Mac-specific sections describe its own capabilities.
 
@@ -72,6 +72,12 @@ open "dist/Open Tangerine.app"
 To keep the app, drag `dist/Open Tangerine.app` into your Applications folder in Finder. The local build is ad-hoc signed, not Apple-notarized. We do not recommend disabling Gatekeeper. A signed, notarized release and automatic updates are planned.
 
 Optional: install FFmpeg from your trusted package manager (`brew install ffmpeg` if you already use Homebrew). Settings → Formats shows whether FFmpeg is available. It is already present on the development Mac. We do not bundle or silently download it.
+
+## Edit a PDF on Mac (0.1.11)
+
+Drag one PDF from Finder and hold **Shift**. Choose **Edit PDF** to add text, highlight, draw or fill supported forms in the bundled Mozilla PDF.js editor. It opens in your browser on this Mac; no account, cloud service or separate installation is needed. Use the viewer’s **Save** button for an edited copy before closing the Open Tangerine editor window.
+
+Choose **Merge** even with one file, then **Add PDFs…** and arrange the list; or drag several PDFs together. **Organize** rotates, duplicates, reorders or removes pages. **Split** extracts pages into separate files. Command opens the full tools list, including compression and metadata. The editor accepts a single PDF up to 128 MB. Annotations add content; they do not rewrite existing paragraphs, perform OCR or securely redact content. Windows/Linux use their existing desktop PDF tools.
 
 ## What changed in 0.1.10
 
