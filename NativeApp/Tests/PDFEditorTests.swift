@@ -7,6 +7,11 @@ import WebKit
 // saveDocument path. A rendered form field is edited and reopened with a different parser.
 @main struct PDFEditorTests {
     @MainActor static func main() async throws {
+        // WebKit startup or script evaluation can stall on a broken host.
+        DispatchQueue.global().asyncAfter(deadline: .now() + 60) {
+            FileHandle.standardError.write(Data("PDF editor integration timed out after 60 seconds\n".utf8))
+            exit(1)
+        }
         _ = NSApplication.shared
         let fm = FileManager.default
         let dir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -30,11 +35,13 @@ import WebKit
             server.start { result in continuation.resume(with: result) }
         }
         let origin = URL(string: "http://127.0.0.1:\(viewer.port!)")!
+        let http = URLSession(configuration: .ephemeral)
+        defer { http.invalidateAndCancel() }
         for path in ["/document.pdf", "/wrong/web/viewer.html", "/\(viewer.pathComponents[1])/unknown"] {
-            let (_, response) = try await URLSession.shared.data(from: origin.appendingPathComponent(path))
+            let (_, response) = try await http.data(from: origin.appendingPathComponent(path))
             precondition((response as? HTTPURLResponse)?.statusCode == 404)
         }
-        let (_, htmlResponse) = try await URLSession.shared.data(from: viewer)
+        let (_, htmlResponse) = try await http.data(from: viewer)
         precondition((htmlResponse as? HTTPURLResponse)?.statusCode == 200)
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
