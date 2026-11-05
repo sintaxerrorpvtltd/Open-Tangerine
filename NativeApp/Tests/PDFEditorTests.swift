@@ -37,6 +37,19 @@ import WebKit
         }
         let (_, htmlResponse) = try await http.data(from: viewer)
         precondition((htmlResponse as? HTTPURLResponse)?.statusCode == 200)
+        let saved: Data
+        if #available(macOS 26, *) {
+            // Hosted WKWebView on this runner reports visibility=hidden and never
+            // renders an annotation layer. Exercise the same form via headless Chrome.
+            let output = dir.appendingPathComponent("edited.pdf")
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            process.arguments = ["node", "NativeApp/Tests/Browser/pdf-save.cjs", viewer.absoluteString, output.path]
+            try process.run()
+            while process.isRunning { try await Task.sleep(nanoseconds: 100_000_000) }
+            guard process.terminationStatus == 0 else { throw OpenTangerineError.invalidInput("Browser PDF edit failed.") }
+            saved = try Data(contentsOf: output)
+        } else {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 1100, height: 800), configuration: configuration)
@@ -69,8 +82,12 @@ import WebKit
             const bytes=await PDFViewerApplication.pdfDocument.saveDocument();
             return btoa(Array.from(bytes, x=>String.fromCharCode(x)).join(''));
             """, arguments: [:], in: nil, contentWorld: .page)
-        guard let encoded = result as? String, let data = Data(base64Encoded: encoded),
-              let edited = PDFDocument(data: data), edited.pageCount == 1,
+        guard let encoded = result as? String, let data = Data(base64Encoded: encoded) else {
+            throw OpenTangerineError.invalidInput("Browser returned no edited PDF.")
+        }
+        saved = data
+        }
+        guard let edited = PDFDocument(data: saved), edited.pageCount == 1,
               edited.page(at: 0)?.annotations.contains(where: { $0.widgetStringValue == "Edited locally" }) == true,
               try Data(contentsOf: source) == original else {
             throw OpenTangerineError.invalidInput("Saved PDF field or original preservation failed.")
