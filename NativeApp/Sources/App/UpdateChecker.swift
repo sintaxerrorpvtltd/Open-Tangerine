@@ -36,24 +36,32 @@ struct AppVersion: Comparable {
     }
     private var checking = false
     private var timer: Timer?
-    var onAvailable: ((String) -> Void)?
+    var onAvailable: ((String?) -> Void)?
     private(set) var availableVersion: String?
-    struct Release: Decodable { let tag_name: String; let draft: Bool; let prerelease: Bool }
+    struct Release: Decodable {
+        struct Asset: Decodable { let name, state, browser_download_url: String }
+        let tag_name: String; let draft: Bool; let prerelease: Bool; let assets: [Asset]
+        var hasMacPackage: Bool {
+            guard tag_name.hasPrefix("v"), AppVersion(tag_name) != nil else { return false }
+            let name = "Open-Tangerine-\(tag_name.dropFirst())-macOS.zip"
+            let url = "https://github.com/sintaxerrorpvtltd/Open-Tangerine/releases/download/\(tag_name)/\(name)"
+            return assets.contains { $0.name == name && $0.state == "uploaded" && $0.browser_download_url == url }
+        }
+    }
 
     func start() {
         Task { await check(interactive: false) }
-        timer = Timer.scheduledTimer(withTimeInterval: 86400, repeats: true) { _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { _ in
             Task { @MainActor in await UpdateChecker.shared.check(interactive: false) }
         }
     }
     func check(interactive: Bool) async {
         if interactive {
             openPage(downloadPage)
-            return
         }
         guard !checking else { return }
-        if let last = defaults.object(forKey: "lastUpdateCheck") as? Date,
-           Date().timeIntervalSince(last) < 86400 { return }
+        if !interactive, let last = defaults.object(forKey: "lastUpdateCheck") as? Date,
+           Date().timeIntervalSince(last) < 60 { return }
         checking = true
         defer { checking = false }
         do {
@@ -67,18 +75,18 @@ struct AppVersion: Comparable {
             }
             guard response.statusCode == 200, data.count < 1_000_000 else { throw URLError(.badServerResponse) }
             let release = try JSONDecoder().decode(Release.self, from: data)
-            guard !release.draft, !release.prerelease, let remote = AppVersion(release.tag_name),
+            guard !release.draft, !release.prerelease, release.hasMacPackage, let remote = AppVersion(release.tag_name),
                   let current = AppVersion(currentVersion) else {
                 throw URLError(.cannotParseResponse)
             }
             defaults.set(Date(), forKey: "lastUpdateCheck")
             if remote > current {
                 availableVersion = release.tag_name
-                onAvailable?(release.tag_name)
 
             } else {
                 availableVersion = nil
             }
+            onAvailable?(availableVersion)
         } catch {
             // Background failures remain silent; manual checks always open the website.
         }

@@ -58,12 +58,12 @@ final class UpdateResponse: URLProtocol {
         precondition(checker.downloadPage.absoluteString == "https://sintaxerrorpvtltd.github.io/Open-Tangerine/?version=0.1.2#download")
         await checker.check(interactive: true)
         precondition(openedPage == checker.downloadPage)
-        precondition(UpdateResponse.requests == 0, "Manual update must open the website without waiting for GitHub")
-        UpdateResponse.body = #"{"tag_name":"v0.1.3","draft":false,"prerelease":false}"#
+        precondition(UpdateResponse.requests == 1, "Manual checks also refresh the menu")
+        UpdateResponse.body = #"{"tag_name":"v0.1.3","draft":false,"prerelease":false,"assets":[{"name":"Open-Tangerine-0.1.3-macOS.zip","state":"uploaded","browser_download_url":"https://github.com/sintaxerrorpvtltd/Open-Tangerine/releases/download/v0.1.3/Open-Tangerine-0.1.3-macOS.zip"}]}"#
         await checker.check(interactive: false)
         precondition(checker.availableVersion == "v0.1.3")
         defaults.removeObject(forKey: "lastUpdateCheck")
-        UpdateResponse.body = #"{"tag_name":"v0.1.2","draft":false,"prerelease":false}"#
+        UpdateResponse.body = #"{"tag_name":"v0.1.2","draft":false,"prerelease":false,"assets":[{"name":"Open-Tangerine-0.1.2-macOS.zip","state":"uploaded","browser_download_url":"https://github.com/sintaxerrorpvtltd/Open-Tangerine/releases/download/v0.1.2/Open-Tangerine-0.1.2-macOS.zip"}]}"#
         await checker.check(interactive: false)
         precondition(checker.availableVersion == nil)
         defaults.removeObject(forKey: "lastUpdateCheck")

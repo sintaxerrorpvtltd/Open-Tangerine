@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var updateMenuItem: NSMenuItem?
     private var statusItem: NSStatusItem?
     private let dragMonitor = DragMonitor()
@@ -15,6 +15,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.applicationIconImage = BrandArtwork.image(size: 256)
         installStatusItem()
         UpdateChecker.shared.onAvailable = { [weak self] version in
+            guard let version else {
+                self?.updateMenuItem?.title = "Check for Updates on Website…"
+                self?.statusItem?.button?.toolTip = "Open Tangerine: hold Shift while dragging a file"
+                self?.statusItem?.button?.image = BrandArtwork.image(size: 24, template: true)
+                return
+            }
             self?.updateMenuItem?.title = "Download update \(version) from website…"
             self?.statusItem?.button?.toolTip = "Open Tangerine — update \(version) available"
             self?.statusItem?.button?.image = NSImage(systemSymbolName: "arrow.down.circle.fill", accessibilityDescription: "Update available")
@@ -69,11 +75,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 entry.image = NSImage(systemSymbolName: symbol, accessibilityDescription: entry.title)
             }
         }
+        menu.delegate = self
         item.menu = menu
         statusItem = item
     }
 
     @MainActor
+    func menuWillOpen(_ menu: NSMenu) { Task { await UpdateChecker.shared.check(interactive: false) } }
+
     @objc private func checkForUpdates() { Task { await UpdateChecker.shared.check(interactive: true) } }
 
     @objc private func convertFiles() {
