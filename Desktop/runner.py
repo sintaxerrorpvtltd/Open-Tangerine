@@ -7,7 +7,13 @@ from engine import output_folder
 class Cancelled(Exception): pass
 
 def worker_command():
-    if getattr(sys,'frozen',False): return [sys.executable,'--worker']
+    if getattr(sys,'frozen',False):
+        executable=Path(sys.executable)
+        if sys.platform=='win32':
+            executable=executable.with_name('OpenTangerineWorker.exe')
+            if not executable.is_file():
+                raise FileNotFoundError('Conversion worker missing. Extract the entire Windows ZIP before launching the app.')
+        return [str(executable),'--worker']
     return [sys.executable,str(Path(__file__).with_name('app.py')),'--worker']
 
 def stop(proc):

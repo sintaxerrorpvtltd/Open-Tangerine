@@ -59,7 +59,9 @@ class BackgroundController(QObject):
         label = f'{count} output file(s)' + (f' · {len(errors)} failed/cancelled' if errors else ' · Cancelled' if cancelled else ' · Done')
         self.status.setText(label); self.tray.setToolTip('Open Tangerine · ' + label)
         self.cancel.setEnabled(False); self.output.setEnabled(bool(count))
-        if not self.window.isVisible():
+        # The progress island already shows this result; avoid a second notification.
+        island = self.window.island
+        if not self.window.isVisible() and not (island and island.handles(self.window.batch)):
             detail = (errors[0][:240] if errors else 'Saved to ' + str(self.window.outputs[-1])) if (errors or count) else 'Conversion cancelled.'
             self.tray.showMessage('Open Tangerine · ' + label, detail,
                                   QSystemTrayIcon.Warning if errors else QSystemTrayIcon.Information)

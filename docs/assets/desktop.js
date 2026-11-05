@@ -1,6 +1,6 @@
 (function(root){
 'use strict';
-const version='0.2.2';
+const version='0.2.3';
 const tag='desktop-v'+version,base='https://github.com/sintaxerrorpvtltd/Open-Tangerine/releases/download/'+tag+'/';
 function assetFor(release,platform){
  if(!release||release.draft||release.tag_name!==tag||!['Windows','Linux'].includes(platform))return null;
