@@ -40,7 +40,7 @@ struct OpenTangerineTests {
         let runner = TestRunner()
 
         runner.test("conversion matrix excludes disabled archives") {
-            try expectEqual(ConversionMatrix.totalConversions, 176)
+            try expectEqual(ConversionMatrix.totalConversions, 182)
             try expectEqual(ConversionMatrix.targets(for: .zip).count, 0)
         }
 
@@ -69,7 +69,10 @@ struct OpenTangerineTests {
         }
 
         runner.test("PDF, TXT, subtitle and archive targets") {
-            try expectEqual(ConversionMatrix.targets(for: .pdf), [.docx, .jpg, .png, .txt])
+            try expectEqual(ConversionMatrix.targets(for: .pdf), [.docx, .jpg, .png, .txt, .md])
+            try expectEqual(ConversionMatrix.targets(for: .md), [.pdf, .jpg, .png, .srt, .vtt])
+            try expectEqual(FileFormat.detect(URL(fileURLWithPath: "/notes.md")), .md)
+            try expectEqual(FileFormat.detect(URL(fileURLWithPath: "/notes.txt")), .txt)
             try expectEqual(ConversionMatrix.targets(for: .txt), [.pdf, .jpg, .png, .srt, .vtt])
             try expectEqual(ConversionMatrix.targets(for: .srt), [.vtt, .txt])
             try expectEqual(ConversionMatrix.targets(for: .zip), [])

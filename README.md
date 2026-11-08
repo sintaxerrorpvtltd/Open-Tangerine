@@ -124,7 +124,7 @@ Start with copies of ordinary files. Try PNG → JPEG, crop/resize, create a PDF
 | Area | Included implementation |
 |---|---|
 | Images | PNG, JPEG, HEIC, TIFF, BMP, WebP, AVIF and SVG input routes; quality settings; edit, crop, resize, rotate, visible redaction, background framing, collage, PDF creation |
-| Documents | PDF to text/images/DOCX; text to PDF/images/subtitles; PDF merge, split and page organization |
+| Documents | PDF to text/images/DOCX/Markdown; text and Markdown to PDF/images/subtitles (Markdown input is rendered as plain text); PDF merge, split and page organization |
 | Media | Audio/video conversions; trim, split, join, crop, speed, snapshots, visible redaction, audio normalization/channel tools/bleeping/visualizer; many need FFmpeg |
 | Subtitles | SRT, VTT and text conversions |
 | File actions | Reveal in Finder, copy files, copy paths, duplicate, streaming SHA-256 checksum copied to clipboard |

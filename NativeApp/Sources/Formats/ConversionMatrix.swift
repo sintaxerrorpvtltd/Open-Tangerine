@@ -15,8 +15,9 @@ enum ConversionMatrix {
         case .gif:
             list = FileFormat.video
         case .pdf:
-            list = [.docx, .jpg, .png, .txt]
-        case .txt:
+            list = [.docx, .jpg, .png, .txt, .md]
+        case .txt, .md:
+            // Markdown input is rendered as plain text, as before it had its own format.
             list = [.pdf, .jpg, .png, .srt, .vtt]
         case .srt, .vtt:
             list = FileFormat.subtitles + [.txt]
