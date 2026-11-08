@@ -139,8 +139,9 @@ enum PDFRenderer {
 struct DocumentEngine: ConversionEngine {
     func supports(from: FileFormat, to: FileFormat) -> Bool {
         switch (from, to) {
-        case (.pdf, .docx), (.pdf, .jpg), (.pdf, .png), (.pdf, .txt): return true
+        case (.pdf, .docx), (.pdf, .jpg), (.pdf, .png), (.pdf, .txt), (.pdf, .md): return true
         case (.txt, .pdf), (.txt, .jpg), (.txt, .png), (.txt, .srt), (.txt, .vtt): return true
+        case (.md, .pdf), (.md, .jpg), (.md, .png), (.md, .srt), (.md, .vtt): return true
         default: return false
         }
     }
@@ -148,7 +149,7 @@ struct DocumentEngine: ConversionEngine {
     func convert(_ request: ConversionRequest) async throws {
         switch request.sourceFormat {
         case .pdf: try await convertPDF(request)
-        case .txt: try await convertText(request)
+        case .txt, .md: try await convertText(request)
         default: throw OpenTangerineError.unsupportedConversion(request.sourceFormat, request.target)
         }
     }
@@ -167,6 +168,9 @@ struct DocumentEngine: ConversionEngine {
                 throw OpenTangerineError.invalidInput("This PDF has no selectable text. Scanned pages require OCR, which is not supported yet.")
             }
             try text.write(to: request.destination, atomically: true, encoding: .utf8)
+        case .md:
+            let markdown = try PDFMarkdown.convert(document, progress: request.progress)
+            try markdown.write(to: request.destination, atomically: true, encoding: .utf8)
         case .jpg, .png:
             if pageCount == 1, let page = document.page(at: 0) {
                 guard let image = PDFRenderer.render(page: page) else { throw OpenTangerineError.encodeFailed(request.destination.lastPathComponent) }

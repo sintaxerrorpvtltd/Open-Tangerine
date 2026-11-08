@@ -92,5 +92,109 @@ import PDFKit
         precondition(SubtitleParser.format(59.9999, separator: ",") == "00:01:00,000")
         precondition(SubtitleParser.parseTimestamp("nan") == nil)
         print("PASS SRT/VTT round trip + both TXT exports; millisecond carry and invalid timestamp")
+        try await markdownTests(root: root, convert: convert)
+    }
+
+    /// Draws positioned lines with named fonts, which survive PDFKit text extraction.
+    static func structuredPDF(_ pages: [[(x: CGFloat, y: CGFloat, runs: [(String, String, CGFloat)])]], to url: URL) {
+        var box = CGRect(x: 0, y: 0, width: 612, height: 792)
+        let context = CGContext(url as CFURL, mediaBox: &box, nil)!
+        for page in pages {
+            context.beginPDFPage(nil)
+            for line in page {
+                let text = NSMutableAttributedString()
+                for (string, font, size) in line.runs {
+                    text.append(NSAttributedString(string: string, attributes: [.font: NSFont(name: font, size: size)!]))
+                }
+                context.textPosition = CGPoint(x: line.x, y: line.y)
+                CTLineDraw(CTLineCreateWithAttributedString(text), context)
+            }
+            context.endPDFPage()
+        }
+        context.closePDF()
+    }
+
+    @MainActor static func markdownTests(root: URL, convert: (URL, FileFormat, FileFormat, String) async throws -> URL) async throws {
+        let regular = "Helvetica", bold = "Helvetica-Bold", italic = "Helvetica-Oblique", mono = "Courier"
+        func plain(_ x: CGFloat, _ y: CGFloat, _ text: String) -> (x: CGFloat, y: CGFloat, runs: [(String, String, CGFloat)]) {
+            (x, y, [(text, regular, 11)])
+        }
+        let draft = root.appendingPathComponent("structured-draft.pdf")
+        structuredPDF([[
+            (72, 740, [("Quarterly Report", bold, 24)]),
+            (72, 704, [("Overview", bold, 16)]),
+            (72, 680, [("This report covers ", regular, 11), ("bold", bold, 11), (" and ", regular, 11), ("italic", italic, 11), (" text with a conver-", regular, 11)]),
+            plain(72, 666, "sion that wraps onto a second line."),
+            plain(72, 640, "Prices use 5*3 and file_name values."),
+            plain(72, 614, "• First item"),
+            plain(72, 600, "• Second item"),
+            plain(90, 586, "◦ Nested item"),
+            plain(72, 560, "1. Step one"),
+            plain(72, 546, "2. Step two"),
+            (72, 520, [("let x = 1", mono, 11)]),
+            (72, 506, [("print(x)", mono, 11)]),
+            plain(72, 480, "Visit Open Tangerine for details."),
+            plain(72, 454, "# not a heading"),
+            plain(72, 428, "This sentence continues on the"),
+            plain(300, 40, "1"),
+        ], [
+            plain(72, 740, "next page as well."),
+        ]], to: draft)
+        let document = PDFDocument(url: draft)!
+        let target = document.findString("Open Tangerine", withOptions: []).first!
+        let link = PDFAnnotation(bounds: target.bounds(for: document.page(at: 0)!), forType: .link, withProperties: nil)
+        link.url = URL(string: "https://example.com/open-tangerine")
+        document.page(at: 0)!.addAnnotation(link)
+        let source = root.appendingPathComponent("structured.pdf")
+        precondition(document.write(to: source))
+
+        let output = try await convert(source, .pdf, .md, "structured.md")
+        precondition(output.pathExtension == "md")
+        let markdown = try String(contentsOf: output, encoding: .utf8)
+        let expected = """
+        # Quarterly Report
+
+        ## Overview
+
+        This report covers **bold** and *italic* text with a conversion that wraps onto a second line.
+
+        Prices use 5\\*3 and file\\_name values.
+
+        - First item
+        - Second item
+            - Nested item
+        1. Step one
+        2. Step two
+
+        ```
+        let x = 1
+        print(x)
+        ```
+
+        Visit [Open Tangerine](https://example.com/open-tangerine) for details.
+
+        \\# not a heading
+
+        This sentence continues on the next page as well.
+
+        """
+        if markdown != expected {
+            FileHandle.standardError.write(Data("Expected:\n\(expected)\nActual:\n\(markdown)\n".utf8))
+            fatalError("PDF -> Markdown structure mismatch")
+        }
+        print("PASS PDF -> Markdown headings, emphasis, hyphenation, escaping, lists, code, links, page numbers, page continuation")
+
+        let scanned = root.appendingPathComponent("images.pdf")
+        do { _ = try await convert(scanned, .pdf, .md, "scan.md"); fatalError("Empty scanned Markdown reported as success") } catch { }
+        let mixed = try await convert(root.appendingPathComponent("mixed.pdf"), .pdf, .md, "mixed.md")
+        let mixedText = try String(contentsOf: mixed, encoding: .utf8)
+        precondition(mixedText.contains("<!-- Page 1 has no selectable text") && mixedText.contains("Open Tangerine document test"))
+        print("PASS PDF -> Markdown rejects scanned-only PDFs and notes scanned pages in mixed PDFs")
+
+        let notes = root.appendingPathComponent("notes.md")
+        try "# Notes\n\nPlain **markdown** input.".write(to: notes, atomically: true, encoding: .utf8)
+        let notesPDF = try await convert(notes, .md, .pdf, "notes.pdf")
+        precondition(PDFDocument(url: notesPDF)!.string!.contains("Plain"))
+        print("PASS Markdown input still converts to PDF")
     }
 }
