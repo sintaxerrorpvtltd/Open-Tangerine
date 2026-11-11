@@ -14,6 +14,7 @@ MEDIA_OUTPUTS = {'MP4': ('mp4', ['-c:v','libx264','-preset','fast','-crf','23','
 DOCX_OUTPUTS = {'DOCX → Text': 'txt', 'DOCX → PDF (text only)': 'pdf'}
 OPERATIONS = list(IMAGE_OUTPUTS) + ['Image → PDF', 'PDF → Text', 'Merge PDFs', 'Split PDF', *DOCX_OUTPUTS, 'SRT → VTT', 'VTT → SRT', 'SHA-256'] + list(MEDIA_OUTPUTS)
 class ConversionError(ValueError): pass
+MEMORY_MESSAGE='This file needs more memory than a conversion is allowed to use. Try a smaller file or a smaller output size.'
 
 def source_file(raw):
     p=Path(raw).expanduser()
@@ -249,6 +250,7 @@ def worker_main():
         raw=sys.stdin.buffer.read(65537)
         if len(raw)>65536: raise ConversionError('Job request too large.')
         result={'ok':True,'outputs':convert(json.loads(raw))}
+    except MemoryError: result={'ok':False,'error':MEMORY_MESSAGE}
     except Exception as e: result={'ok':False,'error':str(e)[:1000] or type(e).__name__}
     print(json.dumps(result,ensure_ascii=True),flush=True)
     return 0 if result['ok'] else 1
