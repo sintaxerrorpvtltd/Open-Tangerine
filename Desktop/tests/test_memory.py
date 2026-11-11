@@ -63,12 +63,60 @@ class Cap(unittest.TestCase):
         finally:
             job.close();parent.stdout.close()
             if parent.poll() is None: parent.kill()
-    def test_cancel_still_stops_the_whole_tree(self):
-        import threading, time
-        spawn = "import subprocess,sys,time;sys.stdin.read();c=subprocess.Popen([sys.executable,'-c','import time;time.sleep(60)']);print(c.pid,flush=True);time.sleep(60)"
-        cancel = threading.Event();threading.Timer(1.0, cancel.set).start();start = time.monotonic()
-        with self.assertRaises(runner.Cancelled): runner.run_job({}, cancel=cancel, command=[sys.executable, '-c', spawn])
-        self.assertLess(time.monotonic() - start, 10)
+    # --- helpers for child cleanup ---
+    def gone(self, pid, seconds=5):
+        import time;end = time.monotonic() + seconds
+        while self.alive(pid) and time.monotonic() < end: time.sleep(.05)
+        return not self.alive(pid)
+    def tree_writing_pid(self, pidfile):
+        """A fake worker that starts a long-running grandchild and writes its PID to a file (run_job captures stdout)."""
+        code = "import subprocess,sys,time;sys.stdin.read();c=subprocess.Popen([sys.executable,'-c','import time;time.sleep(60)']);open(sys.argv[1],'w').write(str(c.pid));time.sleep(60)"
+        return [sys.executable, '-c', code, str(pidfile)]
+    def wait_for_pid(self, pidfile, seconds=10):
+        import time;end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            try: return int(pidfile.read_text())
+            except (OSError, ValueError): time.sleep(.05)
+        self.fail('fake worker never started its child')
+
+    # --- nested-job failure ---
+    def test_if_windows_refuses_to_add_the_worker_it_runs_uncapped_and_the_job_is_closed(self):
+        closed, real_close = [], winjob.MemoryJob.close
+        def close(job): closed.append(True);real_close(job)
+        info = {}
+        with mock.patch.object(winjob.MemoryJob, 'add', return_value=False), mock.patch.object(winjob.MemoryJob, 'close', close):
+            self.assertEqual(runner.run_job({}, command=child(f'print({OK!r})'), info=info), [])
+        self.assertFalse(info['capped']);self.assertEqual(closed, [True])
+    def test_if_the_worker_cannot_be_opened_add_returns_false(self):
+        job = winjob.MemoryJob.create(1 << 30);proc = subprocess.Popen(child(f'print({OK!r})'), stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW)
+        try:
+            with mock.patch.object(winjob._k, 'OpenProcess', return_value=None): self.assertFalse(job.add(proc))
+        finally: proc.communicate(b'{}', timeout=10);job.close()
+    def test_a_worker_started_from_inside_an_outer_job_is_still_capped(self):
+        desktop = str(Path(runner.__file__).resolve().parent)
+        script = f"import sys,json;cmd=json.loads(sys.stdin.read());sys.path.insert(0,{desktop!r});import runner;info={{}};runner.run_job({{}},command=cmd,info=info);print(json.dumps(info))"
+        outer = winjob.MemoryJob.create(2 << 30)
+        proc = subprocess.Popen([sys.executable, '-c', script], stdin=subprocess.PIPE, stdout=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+        try:
+            self.assertTrue(outer.add(proc))
+            out, _ = proc.communicate(json.dumps(child(f'print({OK!r})')).encode(), timeout=60)
+            self.assertTrue(json.loads(out.splitlines()[-1])['capped'])
+        finally: outer.close()
+
+    # --- cancellation and the deadline end the worker and its children ---
+    def test_cancel_ends_the_worker_and_its_child(self):
+        import threading
+        with tempfile.TemporaryDirectory() as tmp:
+            pidfile = Path(tmp) / 'pid';cancel = threading.Event();found = {}
+            def watch(): found['pid'] = self.wait_for_pid(pidfile);cancel.set()
+            t = threading.Thread(target=watch);t.start()
+            with self.assertRaises(runner.Cancelled): runner.run_job({}, cancel=cancel, command=self.tree_writing_pid(pidfile))
+            t.join();self.assertTrue(self.gone(found['pid']))
+    def test_deadline_ends_the_worker_and_its_child(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pidfile = Path(tmp) / 'pid'
+            with self.assertRaises(TimeoutError): runner.run_job({}, timeout=3, command=self.tree_writing_pid(pidfile))
+            self.assertTrue(self.gone(self.wait_for_pid(pidfile, 1)))
 
 class RealWorker(unittest.TestCase):
     def setUp(self):
